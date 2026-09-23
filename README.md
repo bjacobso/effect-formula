@@ -36,6 +36,25 @@ console.log(await Effect.runPromise(session.get("field:total")))
 
 For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
 
+### Function profiles
+
+Use `configureFunctions` to add Effect functions, override a built-in, or remove a function from a host's formula language. Names are case-insensitive. The profile is fixed when an evaluation or session receives its Effect layer.
+
+```ts
+import { Effect, Layer } from "effect"
+import { configureFunctions, memory, number } from "effect-formula"
+
+const functions = configureFunctions({
+  register: {
+    TRIPLE: ([value]) => Effect.succeed(number(value?._tag === "Number" ? value.value * 3 : 0)),
+  },
+  remove: ["NOW", "TODAY"],
+})
+const services = Layer.merge(memory(new Map()), functions)
+```
+
+Provide `functions` to `createSpreadsheet()` or `createForm(fields)` to use the profile in a host adapter. The `spreadsheet()` and `form(fields)` shortcuts use the default function set. Registered functions receive evaluated arguments. An override of a lazy built-in such as `IF` receives all evaluated arguments; the built-in retains its lazy behavior when not overridden. A removed name returns `#NAME?`, even if also registered.
+
 ### Host adapters
 
 `spreadsheet()` and `form(fields)` provide small host APIs over the same session:
@@ -82,4 +101,4 @@ The public API exposes parsing, one-shot evaluation, and a stateful calculation 
 
 ## Status
 
-The parser, evaluator, range and field references, custom functions, recalculation session, and host adapters are implemented. [conformance/rules.json](conformance/rules.json) records the original focused rule cases. The [OpenFormula conformance tracker](conformance/README.md) now inventories all functions listed in the ODF 1.4 Small, Medium, and Large evaluator groups, runs independently written examples, and reports missing coverage. Run `pnpm conformance:report` for the current Small Group status; `pnpm conformance:full` is an intentionally strict gate and currently fails. See [COMPATIBILITY.md](COMPATIBILITY.md) for the supported subset and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.
+The parser, evaluator, range and field references, function profiles, recalculation session, and host adapters are implemented. `COUNTIF`, `SUMIF`, and `AVERAGEIF` now share a criterion matcher with whole-cell, case-insensitive text comparison. [conformance/rules.json](conformance/rules.json) records the original focused rule cases. The [OpenFormula conformance tracker](conformance/README.md) inventories functions listed in the ODF 1.4 Small, Medium, and Large evaluator groups, runs independently written examples, and reports missing coverage. Run `pnpm conformance:report` for the current Small Group status; `pnpm conformance:full` is an intentionally strict gate and currently fails. See [COMPATIBILITY.md](COMPATIBILITY.md) for the supported subset and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.

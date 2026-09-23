@@ -1,4 +1,5 @@
 import { Context, Data, Effect, Layer } from "effect";
+import { matchesCriterion } from "./Criterion.js";
 import type { Ast } from "./Parser.js";
 import type { Scalar, Value } from "./Value.js";
 import {
@@ -33,12 +34,26 @@ export class ReferenceResolver extends Context.Tag("effect-formula/ReferenceReso
 export type CustomFunction = (args: readonly Value[]) => Effect.Effect<Value, EvaluationFailure>;
 export interface FunctionRegistryService {
   readonly functions: ReadonlyMap<string, CustomFunction>;
+  readonly disabled?: ReadonlySet<string>;
 }
 export class FunctionRegistry extends Context.Tag("effect-formula/FunctionRegistry")<
   FunctionRegistry,
   FunctionRegistryService
 >() {}
 export const emptyFunctions = Layer.succeed(FunctionRegistry, { functions: new Map() });
+export interface FunctionConfiguration {
+  readonly register?: Readonly<Record<string, CustomFunction>>;
+  readonly remove?: readonly string[];
+}
+/** Create a function profile. Names are case-insensitive. */
+export function configureFunctions(config: FunctionConfiguration = {}) {
+  return Layer.succeed(FunctionRegistry, {
+    functions: new Map(
+      Object.entries(config.register ?? {}).map(([name, fn]) => [name.toUpperCase(), fn]),
+    ),
+    disabled: new Set((config.remove ?? []).map((name) => name.toUpperCase())),
+  });
+}
 export const memory = (values: ReadonlyMap<string, Value>) =>
   Layer.succeed(ReferenceResolver, {
     get: (key: string) => Effect.succeed(values.get(key) ?? error("#REF!")),
@@ -80,6 +95,34 @@ export function rangeKeys(
     rows.push(keys);
   }
   return rows;
+}
+export function referenceKeys(node: Ast, max = 10000): readonly (readonly string[])[] | undefined {
+  if (node._tag === "Reference") return cell(node.key) ? [[node.key]] : undefined;
+  return node._tag === "Range" ? rangeKeys(node.start, node.end, max) : undefined;
+}
+/** Expand a result reference from its top-left cell to the criteria range geometry. */
+export function offsetReferenceKeys(
+  source: Ast,
+  result: Ast,
+  max = 10000,
+): readonly (readonly string[])[] | undefined {
+  const shape = referenceKeys(source, max);
+  const topLeft =
+    result._tag === "Reference"
+      ? cell(result.key)
+      : result._tag === "Range"
+        ? cell(result.start)
+        : undefined;
+  if (!shape || !topLeft) return undefined;
+  if (result._tag === "Range") {
+    const end = cell(result.end);
+    if (!end) return undefined;
+    topLeft.col = Math.min(topLeft.col, end.col);
+    topLeft.row = Math.min(topLeft.row, end.row);
+  }
+  return shape.map((row, rowIndex) =>
+    row.map((_, colIndex) => keyOf(topLeft.col + colIndex, topLeft.row + rowIndex)),
+  );
 }
 function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
   if (isError(left)) return left;
@@ -467,6 +510,50 @@ export function evaluate(
             );
           case "Call": {
             const name = node.name;
+            if (registry.disabled?.has(name)) return error("#NAME?");
+            const custom = registry.functions.get(name);
+            if (custom) {
+              const args: Value[] = [];
+              for (const arg of node.args) args.push(yield* visit(arg));
+              return yield* custom(args);
+            }
+            if (name === "COUNTIF" || name === "SUMIF" || name === "AVERAGEIF") {
+              if (node.args.length < 2 || node.args.length > (name === "COUNTIF" ? 2 : 3))
+                return error("#VALUE!");
+              const source = node.args[0]!;
+              if (source._tag !== "Reference" && source._tag !== "Range") return error("#VALUE!");
+              const sourceKeys = referenceKeys(source, options.maxRangeCells ?? 10000);
+              if (!sourceKeys?.[0]?.length) return error("#REF!");
+              const criterion = scalar(yield* visit(node.args[1]!));
+              if (isError(criterion)) return criterion;
+              let resultKeys: readonly (readonly string[])[] = sourceKeys;
+              if (node.args[2]) {
+                const result = node.args[2];
+                if (result._tag !== "Reference" && result._tag !== "Range") return error("#VALUE!");
+                const offset = offsetReferenceKeys(source, result, options.maxRangeCells ?? 10000);
+                if (!offset) return error("#REF!");
+                resultKeys = offset;
+              }
+              let matched = 0;
+              let sum = 0;
+              let numbers = 0;
+              for (let row = 0; row < sourceKeys.length; row++)
+                for (let col = 0; col < sourceKeys[row]!.length; col++) {
+                  const candidate = scalar(yield* resolver.get(sourceKeys[row]![col]!));
+                  if (!matchesCriterion(candidate, criterion)) continue;
+                  matched++;
+                  if (name === "COUNTIF") continue;
+                  const value = scalar(yield* resolver.get(resultKeys[row]![col]!));
+                  if (isError(value)) return value;
+                  if (value._tag === "Number") {
+                    sum += value.value;
+                    numbers++;
+                  }
+                }
+              if (name === "COUNTIF") return number(matched);
+              if (name === "SUMIF") return number(sum);
+              return numbers ? number(sum / numbers) : error("#DIV/0!");
+            }
             if (name === "CHOOSE") {
               if (node.args.length < 2) return error("#VALUE!");
               const index = toNumber(scalar(yield* visit(node.args[0]!)));
@@ -522,8 +609,7 @@ export function evaluate(
               return aggregate(name, args);
             const built = builtIn(name, args);
             if (built !== undefined) return built;
-            const custom = registry.functions.get(name);
-            return custom ? yield* custom(args) : error("#NAME?");
+            return error("#NAME?");
           }
         }
       });

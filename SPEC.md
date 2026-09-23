@@ -54,7 +54,7 @@ createSession(options?: SessionOptions): Effect.Effect<FormulaSession, never, Re
 
 The host owns source values and reference identity. `spreadsheet()` maps A1 cells; `form(fields)` maps declared field keys. Both expose `set`, `get`, and `snapshot` over a calculation session. Unset spreadsheet cells and declared empty form fields are Blank; undeclared form fields give `#REF!`. The core neither stores UI state nor assumes all references are cells. The host decides how to authorize and scope data exposed to formula resolvers. Repeated form records and multiple sheets remain future work.
 
-Built-in functions have explicit arity and evaluation behavior in the evaluator; a metadata registry is future work. `IF` evaluates only the selected branch. Aggregates visit range entries in row-major order. Custom functions may return a formula value or typed Effect failure. The evaluator has configurable limits on expression length, parser nesting, range cells visited, and evaluation steps. Defaults are 10,000 characters, 100 parser levels, 10,000 range cells, and 100,000 evaluation steps.
+Built-in functions have explicit arity and evaluation behavior in the evaluator. `configureFunctions` creates an Effect function profile: registered functions override built-ins, removed names return `#NAME?`, and removal takes precedence over registration. Registered functions receive eager values; built-in `IF` and `CHOOSE` evaluate only selected branches. Aggregates visit range entries in row-major order. Custom functions may return a formula value or typed Effect failure. The evaluator has configurable limits on expression length, parser nesting, range cells visited, and evaluation steps. Defaults are 10,000 characters, 100 parser levels, 10,000 range cells, and 100,000 evaluation steps.
 
 ## 6. Dependencies and recalculation
 
@@ -64,7 +64,7 @@ The session recalculates affected formulas eagerly and serializes update batches
 
 ## 7. First function set
 
-The first slice implemented `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`. Conformance work has added a broader sampled set, including `CHOOSE`, information functions, common mathematics, and text functions. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
+The first slice implemented `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`. Conformance work has added a broader sampled set, including `CHOOSE`, `COUNTIF`, `SUMIF`, `AVERAGEIF`, information functions, common mathematics, and text functions. The conditional aggregates share whole-cell, case-insensitive criterion matching; regular expressions and wildcards are not enabled. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
 
 ## 8. Verification and compatibility claims
 

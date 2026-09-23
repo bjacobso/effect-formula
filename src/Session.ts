@@ -5,6 +5,7 @@ import {
   evaluate,
   FunctionRegistry,
   type FunctionRegistryService,
+  offsetReferenceKeys,
   ReferenceResolver,
   type ReferenceResolverService,
   type ResolutionFailure,
@@ -46,6 +47,9 @@ function dependencyKeys(ast: Ast, limit: number): ReadonlySet<string> {
         visit(node.right);
         break;
       case "Call":
+        if ((node.name === "SUMIF" || node.name === "AVERAGEIF") && node.args[0] && node.args[2])
+          for (const row of offsetReferenceKeys(node.args[0], node.args[2], limit) ?? [])
+            for (const key of row) keys.add(key);
         node.args.forEach(visit);
         break;
     }

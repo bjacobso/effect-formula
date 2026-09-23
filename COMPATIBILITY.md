@@ -7,7 +7,7 @@ This project implements an independent subset of [OpenFormula 1.4](https://docs.
 | Scalars and formula errors | Supported subset | Blank, finite number, text, boolean, and common error values. Dates and complex numbers are absent. |
 | Operators | Supported subset | Unary signs, arithmetic, exponentiation, concatenation, and comparisons. Coercion uses the first-slice rules in `Value.ts`. |
 | References | Supported subset | One-sheet A1 cells, rectangular ranges, and form fields. No cross-sheet, named, or external references. |
-| Functions | Supported subset | Arithmetic, logic, aggregate, information, and text functions have representative passing examples. The conformance report lists each required function separately. |
+| Functions | Supported subset | Arithmetic, logic, aggregate, information, and text functions have representative passing examples. `COUNTIF`, `SUMIF`, and `AVERAGEIF` use whole-cell criteria matching without regular expressions or wildcards. Host profiles can register, override, or remove function names. The conformance report lists each required function separately. |
 | Recalculation | Project behavior | Batch updates, affected formula recalculation, cycles, async update serialization. |
 | Host adapters | Project behavior | Spreadsheet cells default to blank; declared form fields default to blank; unknown form fields produce `#REF!`. |
 | ODF Small Group | Incomplete | The strict gate is red; many required functions are missing and no requirement has completed a full section audit. |

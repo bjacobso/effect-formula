@@ -483,6 +483,9 @@
     { "id": "function.VALUE", "name": "numeric text", "formula": "=VALUE(\"12.5\")", "expected": { "_tag": "Number", "value": 12.5 } },
     { "id": "function.CHOOSE", "name": "selected branch only", "formula": "=CHOOSE(2;1/0;42)", "expected": { "_tag": "Number", "value": 42 } },
     { "id": "function.ROWS", "name": "row count", "formula": "=ROWS([.A1:.C2])", "expected": { "_tag": "Number", "value": 2 } },
-    { "id": "function.COLUMNS", "name": "column count", "formula": "=COLUMNS([.A1:.C2])", "expected": { "_tag": "Number", "value": 3 } }
+    { "id": "function.COLUMNS", "name": "column count", "formula": "=COLUMNS([.A1:.C2])", "expected": { "_tag": "Number", "value": 3 } },
+    { "id": "function.COUNTIF", "name": "numeric comparator", "formula": "=COUNTIF([.A1:.A3];\">1\")", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 } }, "expected": { "_tag": "Number", "value": 2 } },
+    { "id": "function.SUMIF", "name": "offset result range", "formula": "=SUMIF([.A1:.A3];\">1\";[.B1])", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 }, "cell:B2": { "_tag": "Number", "value": 20 }, "cell:B3": { "_tag": "Number", "value": 30 } }, "expected": { "_tag": "Number", "value": 50 } },
+    { "id": "function.AVERAGEIF", "name": "average matching cells", "formula": "=AVERAGEIF([.A1:.A3];\">1\")", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 } }, "expected": { "_tag": "Number", "value": 2.5 } }
   ]
 }
