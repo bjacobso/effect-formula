@@ -671,12 +671,16 @@ export function evaluate(
             if (name === "AND" || name === "OR") {
               if (!node.args.length) return error("#VALUE!");
               let result = name === "AND";
-              for (const arg of node.args)
-                for (const entry of entries(yield* visit(arg))) {
+              for (const arg of node.args) {
+                const evaluated = yield* visit(arg);
+                for (const entry of entries(evaluated)) {
+                  if (evaluated._tag === "Range" && entry._tag !== "Number" && !isError(entry))
+                    continue;
                   const value = toBoolean(entry);
                   if (isError(value)) return value;
                   result = name === "AND" ? result && value.value : result || value.value;
                 }
+              }
               return bool(result);
             }
             if (name === "NOT") {

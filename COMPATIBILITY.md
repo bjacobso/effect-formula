@@ -10,7 +10,7 @@ This project implements an independent subset of [OpenFormula 1.4](https://docs.
 | Functions | Sampled | All 110 Small Group functions have passing examples. `VALUE` accepts invariant numbers and common en-US numeric, date, and time formats. Date, finance, lookup, database, aggregate, and text semantics still need section-level edge audits. Criteria use whole-cell matching without regular expressions or wildcards. Host profiles can register, override, or remove names. |
 | Recalculation | Project behavior | Batch updates, affected formula recalculation, cycles, async update serialization. |
 | Host adapters | Project behavior | Spreadsheet cells default to blank; declared form fields default to blank; unknown form fields produce `#REF!`. |
-| ODF Small Group | Incomplete | All 141 tracked entries have passing samples; `FALSE` and `TRUE` have completed section audits. Full ODF reference syntax, host-defined locale behavior, and function boundary cases remain gaps. |
+| ODF Small Group | Incomplete | All 141 tracked entries have passing samples; `FALSE`, `TRUE`, `PI`, and `NA` have completed section audits. Full ODF reference syntax, host-defined locale behavior, and function boundary cases remain gaps. |
 | Excel compatibility | Partial | Explicit comma-argument parse option; no Excel compatibility claim. |
 
 The cases in `conformance/rules.json` run through `test/conformance.test.ts`; the group examples run through `test/openformula-cases.test.ts`. Host behavior is tested in `test/adapters.test.ts`. Run `pnpm conformance:report` for the group status or `pnpm check` for all passing checks. Differential comparisons against other engines are diagnostic only.

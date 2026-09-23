@@ -26,7 +26,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "conformance": "vitest run test/conformance.test.ts",
+    "conformance": "vitest run test/conformance.test.ts test/openformula-cases.test.ts",
     "conformance:full": "pnpm build && node scripts/conformance-full.mjs --group small",
     "conformance:report": "pnpm build && node scripts/conformance-full.mjs --group small --report",
     "format": "biome format --write src test package.json",

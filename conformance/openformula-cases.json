@@ -74,6 +74,19 @@
       }
     },
     {
+      "id": "function.PI",
+      "name": "pi rejects arguments",
+      "formula": "=PI(1)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.PI",
+      "name": "pi works in arithmetic",
+      "formula": "=PI()*2",
+      "expected": { "_tag": "Number", "value": 6.283185307179586 },
+      "tolerance": 1e-15
+    },
+    {
       "id": "function.NA",
       "name": "not available error",
       "formula": "=NA()",
@@ -81,6 +94,24 @@
         "_tag": "Error",
         "code": "#N/A"
       }
+    },
+    {
+      "id": "function.NA",
+      "name": "na rejects arguments",
+      "formula": "=NA(1)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.NA",
+      "name": "na propagates as error",
+      "formula": "=NA()+1",
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.NA",
+      "name": "na is recognized by ISNA",
+      "formula": "=ISNA(NA())",
+      "expected": { "_tag": "Boolean", "value": true }
     },
     {
       "id": "function.ABS",
@@ -250,6 +281,60 @@
         "_tag": "Boolean",
         "value": false
       }
+    },
+    {
+      "id": "function.IF",
+      "name": "two arguments true missing result",
+      "formula": "=IF(TRUE();)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.IF",
+      "name": "two arguments false default",
+      "formula": "=IF(FALSE();9)",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.IF",
+      "name": "three arguments both results missing",
+      "formula": "=IF(FALSE();;)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.IF",
+      "name": "three arguments true result missing",
+      "formula": "=IF(TRUE();;9)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.IF",
+      "name": "three arguments false result missing",
+      "formula": "=IF(FALSE();9;)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.IF",
+      "name": "three arguments choose false result",
+      "formula": "=IF(FALSE();9;7)",
+      "expected": { "_tag": "Number", "value": 7 }
+    },
+    {
+      "id": "function.IF",
+      "name": "skip false error branch",
+      "formula": "=IF(TRUE();3;1/0)",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.IF",
+      "name": "skip true error branch",
+      "formula": "=IF(FALSE();1/0;4)",
+      "expected": { "_tag": "Number", "value": 4 }
+    },
+    {
+      "id": "function.IF",
+      "name": "condition error propagates",
+      "formula": "=IF(#N/A;1;2)",
+      "expected": { "_tag": "Error", "code": "#N/A" }
     },
     {
       "id": "operator.equal",
@@ -1491,6 +1576,28 @@
       }
     },
     {
+      "id": "function.AND",
+      "name": "range number sequence skips blank text and distinct logical cells",
+      "formula": "=AND([.A1:.A4])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Blank" },
+        "cell:A3": { "_tag": "Text", "value": "ignored" },
+        "cell:A4": { "_tag": "Boolean", "value": false }
+      },
+      "expected": { "_tag": "Boolean", "value": true }
+    },
+    {
+      "id": "function.AND",
+      "name": "range error propagates",
+      "formula": "=AND([.A1:.A2])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Error", "code": "#N/A" }
+      },
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
       "id": "function.AVERAGE",
       "name": "basic function AVERAGE",
       "formula": "=AVERAGE(1;3)",
@@ -1570,6 +1677,28 @@
         "_tag": "Boolean",
         "value": true
       }
+    },
+    {
+      "id": "function.OR",
+      "name": "range number sequence skips blank text and distinct logical cells",
+      "formula": "=OR([.A1:.A4])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 0 },
+        "cell:A2": { "_tag": "Blank" },
+        "cell:A3": { "_tag": "Text", "value": "ignored" },
+        "cell:A4": { "_tag": "Boolean", "value": true }
+      },
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.OR",
+      "name": "range error propagates",
+      "formula": "=OR([.A1:.A2])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 0 },
+        "cell:A2": { "_tag": "Error", "code": "#N/A" }
+      },
+      "expected": { "_tag": "Error", "code": "#N/A" }
     },
     {
       "id": "function.SUM",
