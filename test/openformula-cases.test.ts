@@ -8,6 +8,9 @@ interface Sample {
   readonly name: string;
   readonly formula: string;
   readonly bindings?: Readonly<Record<string, Value>>;
+  readonly preset?: string;
+  readonly clock?: string;
+  readonly tolerance?: number;
   readonly expected: Value;
 }
 interface Group {
@@ -17,7 +20,11 @@ interface Group {
 const read = (name: string) =>
   JSON.parse(readFileSync(new URL(`../conformance/${name}`, import.meta.url), "utf8"));
 const inventory = read("openformula-1.4-inventory.json") as { readonly groups: readonly Group[] };
-const samples = (read("openformula-cases.json") as { readonly cases: readonly Sample[] }).cases;
+const corpus = read("openformula-cases.json") as {
+  readonly cases: readonly Sample[];
+  readonly presets?: Readonly<Record<string, Readonly<Record<string, Value>>>>;
+};
+const samples = corpus.cases;
 
 describe("OpenFormula 1.4 inventory", () => {
   it("tracks every group entry and maps each executable case to a requirement", () => {
@@ -28,6 +35,13 @@ describe("OpenFormula 1.4 inventory", () => {
     ]);
     expect(new Set(ids).size).toBe(ids.length);
     for (const sample of samples) expect(ids).toContain(sample.id);
+    const sampled = new Set(samples.map((sample) => sample.id));
+    for (const fn of inventory.groups[0]!.functions)
+      expect(sampled.has(`function.${fn.name}`)).toBe(true);
+    for (const requirement of inventory.groups[0]!.requirements)
+      expect(sampled.has(requirement.id)).toBe(true);
+    for (const sample of samples)
+      if (sample.preset) expect(corpus.presets).toHaveProperty(sample.preset);
     expect(new Set(samples.map((sample) => `${sample.id}/${sample.name}`)).size).toBe(
       samples.length,
     );
@@ -35,11 +49,23 @@ describe("OpenFormula 1.4 inventory", () => {
   for (const sample of samples) {
     it(`${sample.id}: ${sample.name}`, async () => {
       const ast = parseSync(sample.formula);
-      const values = new Map(Object.entries(sample.bindings ?? {}));
-      const result = await Effect.runPromise(
-        evaluate(ast).pipe(Effect.provide(Layer.merge(memory(values), emptyFunctions))),
+      const values = new Map(
+        Object.entries({ ...corpus.presets?.[sample.preset ?? ""], ...sample.bindings }),
       );
-      expect(result).toEqual(sample.expected);
+      const result = await Effect.runPromise(
+        evaluate(ast, sample.clock ? { clock: () => new Date(sample.clock!) } : {}).pipe(
+          Effect.provide(Layer.merge(memory(values), emptyFunctions)),
+        ),
+      );
+      if (
+        sample.tolerance !== undefined &&
+        result._tag === "Number" &&
+        sample.expected._tag === "Number"
+      )
+        expect(Math.abs(result.value - sample.expected.value)).toBeLessThanOrEqual(
+          sample.tolerance,
+        );
+      else expect(result).toEqual(sample.expected);
     });
   }
 });

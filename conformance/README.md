@@ -4,6 +4,8 @@ The source of truth is [ODF 1.4 Part 4, section 2.3](https://docs.oasis-open.org
 
 `openformula-cases.json` contains independently written examples linked to inventory IDs. `audits.json` lists requirements that have undergone a complete section-level semantic audit. It is empty: passing an example leaves its requirement **sampled**. Keep it empty until normal, boundary, error, reference, and type cases required by a section have been reviewed and tested.
 
+The Small Group currently has a passing sample for each of its 141 tracked entries. The corpus supports reusable cell-binding presets, a fixed clock for date functions, and explicit numeric tolerances for iterative calculations. A sample proves only the stated example; it does not establish full support for the referenced section.
+
 Run:
 
 ```sh

@@ -36,6 +36,11 @@ describe("one-shot evaluation", () => {
     });
     expect(() => parseSync("=SUM(1,2,3)")).toThrow();
   });
+  it("meets the OpenFormula basic string and nesting limits", async () => {
+    const longText = "a".repeat(32767);
+    expect(await run(`="${longText}"`)).toEqual(text(longText));
+    expect(await run(`=${"ABS(".repeat(7)}-1${")".repeat(7)}`)).toEqual(number(1));
+  });
   it("evaluates ranges and field references through one core", async () => {
     const values = new Map<string, Value>([
       ["cell:A1", number(2)],
@@ -71,6 +76,21 @@ describe("one-shot evaluation", () => {
       ),
     ).toEqual(number(42));
   });
+  it("resolves simple named expressions and reference intersection", async () => {
+    expect(await run("=TAX*2", new Map([["name:TAX", number(3)]]))).toEqual(number(6));
+    expect(await run("=$$TAX*2", new Map([["name:TAX", number(3)]]))).toEqual(number(6));
+    expect(await run("=MISSING_NAME")).toEqual(error("#NAME?"));
+    expect(
+      await run(
+        "=SUM([.A1:.B2]![.B1:.C2])",
+        new Map([
+          ["cell:B1", number(10)],
+          ["cell:B2", number(20)],
+        ]),
+      ),
+    ).toEqual(number(30));
+    expect(await run("=[.A1]![.B1]")).toEqual(error("#NULL!"));
+  });
 });
 
 describe("session", () => {
@@ -105,6 +125,19 @@ describe("session", () => {
       session.update([{ _tag: "Input", key: "cell:A2", value: number(8) }]),
     );
     expect(result.changed.get("cell:B1")).toEqual(number(12));
+  });
+  it("recalculates formulas that depend on a named expression", async () => {
+    const session = await Effect.runPromise(createSession().pipe(Effect.provide(layer())));
+    await Effect.runPromise(
+      session.update([
+        { _tag: "Input", key: "name:TAX", value: number(3) },
+        { _tag: "Formula", key: "cell:A1", formula: "=TAX*2" },
+      ]),
+    );
+    const revision = await Effect.runPromise(
+      session.update([{ _tag: "Input", key: "name:TAX", value: number(4) }]),
+    );
+    expect(revision.changed.get("cell:A1")).toEqual(number(8));
   });
   it("detects cycles and preserves state after a parse failure", async () => {
     const session = await Effect.runPromise(createSession().pipe(Effect.provide(layer())));

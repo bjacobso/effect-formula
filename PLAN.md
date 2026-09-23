@@ -34,6 +34,9 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [x] Extract the ODF 1.4 Small, Medium, and Large group function lists and listed nonfunction requirements into an auditable inventory.
 - [x] Add executable OpenFormula examples and a strict gate that remains red while requirements lack a full semantic audit.
 - [x] Add a shared criterion matcher and `COUNTIF`, `SUMIF`, and `AVERAGEIF`; support host function profiles that register, override, and remove names.
+- [x] Provide implementation paths and passing examples for all 110 listed Small Group functions and all 31 tracked nonfunction entries.
+- [ ] Complete ODF 5.8 reference syntax, including sheet-qualified references and whole-row/column ranges.
+- [ ] Audit date epochs, locale and time zone behavior, volatile recalculation, finance solver bounds, and lookup matching.
 - [ ] Audit criterion matching against host wildcard, regular-expression, and whole-cell settings before a conformance claim.
 - [ ] Expand examples into boundary, error, type, reference, and locale cases for every required function and operator; review all general evaluator provisions.
 - [ ] Audit each tracked requirement against the full normative section before moving it to `verified`.

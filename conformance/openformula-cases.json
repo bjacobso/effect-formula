@@ -467,25 +467,1243 @@
         "value": -2
       }
     },
-    { "id": "function.LEN", "name": "Unicode code points", "formula": "=LEN(\"A😀\")", "expected": { "_tag": "Number", "value": 2 } },
-    { "id": "function.LEFT", "name": "first Unicode character", "formula": "=LEFT(\"😀abc\")", "expected": { "_tag": "Text", "value": "😀" } },
-    { "id": "function.RIGHT", "name": "last two characters", "formula": "=RIGHT(\"abcd\";2)", "expected": { "_tag": "Text", "value": "cd" } },
-    { "id": "function.MID", "name": "middle substring", "formula": "=MID(\"abcd\";2;2)", "expected": { "_tag": "Text", "value": "bc" } },
-    { "id": "function.LOWER", "name": "lowercase text", "formula": "=LOWER(\"AbC\")", "expected": { "_tag": "Text", "value": "abc" } },
-    { "id": "function.UPPER", "name": "uppercase text", "formula": "=UPPER(\"AbC\")", "expected": { "_tag": "Text", "value": "ABC" } },
-    { "id": "function.TRIM", "name": "collapse whitespace", "formula": "=TRIM(\"  a   b  \" )", "expected": { "_tag": "Text", "value": "a b" } },
-    { "id": "function.EXACT", "name": "case sensitive comparison", "formula": "=EXACT(\"a\";\"A\")", "expected": { "_tag": "Boolean", "value": false } },
-    { "id": "function.FIND", "name": "one based substring position", "formula": "=FIND(\"bc\";\"abcd\")", "expected": { "_tag": "Number", "value": 2 } },
-    { "id": "function.FIND", "name": "missing substring", "formula": "=FIND(\"x\";\"abcd\")", "expected": { "_tag": "Error", "code": "#VALUE!" } },
-    { "id": "function.REPT", "name": "repeat text", "formula": "=REPT(\"ab\";3)", "expected": { "_tag": "Text", "value": "ababab" } },
-    { "id": "function.N", "name": "boolean to number", "formula": "=N(TRUE())", "expected": { "_tag": "Number", "value": 1 } },
-    { "id": "function.T", "name": "nontext to empty text", "formula": "=T(7)", "expected": { "_tag": "Text", "value": "" } },
-    { "id": "function.VALUE", "name": "numeric text", "formula": "=VALUE(\"12.5\")", "expected": { "_tag": "Number", "value": 12.5 } },
-    { "id": "function.CHOOSE", "name": "selected branch only", "formula": "=CHOOSE(2;1/0;42)", "expected": { "_tag": "Number", "value": 42 } },
-    { "id": "function.ROWS", "name": "row count", "formula": "=ROWS([.A1:.C2])", "expected": { "_tag": "Number", "value": 2 } },
-    { "id": "function.COLUMNS", "name": "column count", "formula": "=COLUMNS([.A1:.C2])", "expected": { "_tag": "Number", "value": 3 } },
-    { "id": "function.COUNTIF", "name": "numeric comparator", "formula": "=COUNTIF([.A1:.A3];\">1\")", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 } }, "expected": { "_tag": "Number", "value": 2 } },
-    { "id": "function.SUMIF", "name": "offset result range", "formula": "=SUMIF([.A1:.A3];\">1\";[.B1])", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 }, "cell:B2": { "_tag": "Number", "value": 20 }, "cell:B3": { "_tag": "Number", "value": 30 } }, "expected": { "_tag": "Number", "value": 50 } },
-    { "id": "function.AVERAGEIF", "name": "average matching cells", "formula": "=AVERAGEIF([.A1:.A3];\">1\")", "bindings": { "cell:A1": { "_tag": "Number", "value": 1 }, "cell:A2": { "_tag": "Number", "value": 2 }, "cell:A3": { "_tag": "Number", "value": 3 } }, "expected": { "_tag": "Number", "value": 2.5 } }
-  ]
+    {
+      "id": "function.LEN",
+      "name": "Unicode code points",
+      "formula": "=LEN(\"A😀\")",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.LEFT",
+      "name": "first Unicode character",
+      "formula": "=LEFT(\"😀abc\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "😀"
+      }
+    },
+    {
+      "id": "function.RIGHT",
+      "name": "last two characters",
+      "formula": "=RIGHT(\"abcd\";2)",
+      "expected": {
+        "_tag": "Text",
+        "value": "cd"
+      }
+    },
+    {
+      "id": "function.MID",
+      "name": "middle substring",
+      "formula": "=MID(\"abcd\";2;2)",
+      "expected": {
+        "_tag": "Text",
+        "value": "bc"
+      }
+    },
+    {
+      "id": "function.LOWER",
+      "name": "lowercase text",
+      "formula": "=LOWER(\"AbC\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "abc"
+      }
+    },
+    {
+      "id": "function.UPPER",
+      "name": "uppercase text",
+      "formula": "=UPPER(\"AbC\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "ABC"
+      }
+    },
+    {
+      "id": "function.TRIM",
+      "name": "collapse whitespace",
+      "formula": "=TRIM(\"  a   b  \" )",
+      "expected": {
+        "_tag": "Text",
+        "value": "a b"
+      }
+    },
+    {
+      "id": "function.EXACT",
+      "name": "case sensitive comparison",
+      "formula": "=EXACT(\"a\";\"A\")",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "function.FIND",
+      "name": "one based substring position",
+      "formula": "=FIND(\"bc\";\"abcd\")",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.FIND",
+      "name": "missing substring",
+      "formula": "=FIND(\"x\";\"abcd\")",
+      "expected": {
+        "_tag": "Error",
+        "code": "#VALUE!"
+      }
+    },
+    {
+      "id": "function.REPT",
+      "name": "repeat text",
+      "formula": "=REPT(\"ab\";3)",
+      "expected": {
+        "_tag": "Text",
+        "value": "ababab"
+      }
+    },
+    {
+      "id": "function.N",
+      "name": "boolean to number",
+      "formula": "=N(TRUE())",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.T",
+      "name": "nontext to empty text",
+      "formula": "=T(7)",
+      "expected": {
+        "_tag": "Text",
+        "value": ""
+      }
+    },
+    {
+      "id": "function.VALUE",
+      "name": "numeric text",
+      "formula": "=VALUE(\"12.5\")",
+      "expected": {
+        "_tag": "Number",
+        "value": 12.5
+      }
+    },
+    {
+      "id": "function.CHOOSE",
+      "name": "selected branch only",
+      "formula": "=CHOOSE(2;1/0;42)",
+      "expected": {
+        "_tag": "Number",
+        "value": 42
+      }
+    },
+    {
+      "id": "function.ROWS",
+      "name": "row count",
+      "formula": "=ROWS([.A1:.C2])",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.COLUMNS",
+      "name": "column count",
+      "formula": "=COLUMNS([.A1:.C2])",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.COUNTIF",
+      "name": "numeric comparator",
+      "formula": "=COUNTIF([.A1:.A3];\">1\")",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 1
+        },
+        "cell:A2": {
+          "_tag": "Number",
+          "value": 2
+        },
+        "cell:A3": {
+          "_tag": "Number",
+          "value": 3
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.SUMIF",
+      "name": "offset result range",
+      "formula": "=SUMIF([.A1:.A3];\">1\";[.B1])",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 1
+        },
+        "cell:A2": {
+          "_tag": "Number",
+          "value": 2
+        },
+        "cell:A3": {
+          "_tag": "Number",
+          "value": 3
+        },
+        "cell:B2": {
+          "_tag": "Number",
+          "value": 20
+        },
+        "cell:B3": {
+          "_tag": "Number",
+          "value": 30
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 50
+      }
+    },
+    {
+      "id": "function.AVERAGEIF",
+      "name": "average matching cells",
+      "formula": "=AVERAGEIF([.A1:.A3];\">1\")",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 1
+        },
+        "cell:A2": {
+          "_tag": "Number",
+          "value": 2
+        },
+        "cell:A3": {
+          "_tag": "Number",
+          "value": 3
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 2.5
+      }
+    },
+    {
+      "id": "function.PRODUCT",
+      "name": "representative product",
+      "formula": "=PRODUCT(2;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 6
+      }
+    },
+    {
+      "id": "function.PROPER",
+      "name": "representative proper",
+      "formula": "=PROPER(\"hello WORLD\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "Hello World"
+      }
+    },
+    {
+      "id": "function.REPLACE",
+      "name": "representative replace",
+      "formula": "=REPLACE(\"abcd\";2;2;\"XY\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "aXYd"
+      }
+    },
+    {
+      "id": "function.SUBSTITUTE",
+      "name": "representative substitute",
+      "formula": "=SUBSTITUTE(\"abab\";\"ab\";\"x\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "xx"
+      }
+    },
+    {
+      "id": "function.STDEV",
+      "name": "representative stdev",
+      "formula": "=STDEV(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1.4142135623730951
+      }
+    },
+    {
+      "id": "function.STDEVP",
+      "name": "representative stdevp",
+      "formula": "=STDEVP(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.VAR",
+      "name": "representative var",
+      "formula": "=VAR(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.VARP",
+      "name": "representative varp",
+      "formula": "=VARP(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.DATE",
+      "name": "representative date",
+      "formula": "=DATE(2020;1;1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 43831
+      }
+    },
+    {
+      "id": "function.DAY",
+      "name": "representative day",
+      "formula": "=DAY(43831)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.MONTH",
+      "name": "representative month",
+      "formula": "=MONTH(43831)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.YEAR",
+      "name": "representative year",
+      "formula": "=YEAR(43831)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2020
+      }
+    },
+    {
+      "id": "function.TIME",
+      "name": "representative time",
+      "formula": "=TIME(12;0;0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "representative hour",
+      "formula": "=HOUR(0.5)",
+      "expected": {
+        "_tag": "Number",
+        "value": 12
+      }
+    },
+    {
+      "id": "function.MINUTE",
+      "name": "representative minute",
+      "formula": "=MINUTE(0.5)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.SECOND",
+      "name": "representative second",
+      "formula": "=SECOND(0.5)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.WEEKDAY",
+      "name": "representative weekday",
+      "formula": "=WEEKDAY(43831)",
+      "expected": {
+        "_tag": "Number",
+        "value": 4
+      }
+    },
+    {
+      "id": "function.DDB",
+      "name": "representative ddb",
+      "formula": "=DDB(100;0;10;1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.SLN",
+      "name": "representative sln",
+      "formula": "=SLN(100;0;10)",
+      "expected": {
+        "_tag": "Number",
+        "value": 10
+      }
+    },
+    {
+      "id": "function.SYD",
+      "name": "representative syd",
+      "formula": "=SYD(100;0;4;1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 40
+      }
+    },
+    {
+      "id": "function.FV",
+      "name": "representative fv",
+      "formula": "=FV(0;2;-10)",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.NPER",
+      "name": "representative nper",
+      "formula": "=NPER(0;-10;20)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.NPV",
+      "name": "representative npv",
+      "formula": "=NPV(0;10;20)",
+      "expected": {
+        "_tag": "Number",
+        "value": 30
+      }
+    },
+    {
+      "id": "function.PMT",
+      "name": "representative pmt",
+      "formula": "=PMT(0;2;20)",
+      "expected": {
+        "_tag": "Number",
+        "value": -10
+      }
+    },
+    {
+      "id": "function.PV",
+      "name": "representative pv",
+      "formula": "=PV(0;2;-10)",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.RATE",
+      "name": "representative rate",
+      "formula": "=RATE(1;-100;100;0;0;0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.NOW",
+      "name": "fixed UTC clock",
+      "formula": "=NOW()",
+      "clock": "2020-01-01T00:00:00.000Z",
+      "expected": {
+        "_tag": "Number",
+        "value": 43831
+      }
+    },
+    {
+      "id": "function.TODAY",
+      "name": "fixed UTC clock",
+      "formula": "=TODAY()",
+      "clock": "2020-01-01T00:00:00.000Z",
+      "expected": {
+        "_tag": "Number",
+        "value": 43831
+      }
+    },
+    {
+      "id": "function.IRR",
+      "name": "zero-return cash flow",
+      "formula": "=IRR([.E1:.E2];0)",
+      "preset": "cash",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "exact reference lookup",
+      "formula": "=INDEX([.A1:.B3];2;2)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "exact reference lookup",
+      "formula": "=MATCH(2;[.A1:.A3];0)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "exact reference lookup",
+      "formula": "=VLOOKUP(2;[.A1:.B3];2;FALSE())",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "exact reference lookup",
+      "formula": "=HLOOKUP(2;[.A1:.C2];2;FALSE())",
+      "preset": "horizontal",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.DAVERAGE",
+      "name": "matching database records",
+      "formula": "=DAVERAGE([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.DCOUNT",
+      "name": "matching database records",
+      "formula": "=DCOUNT([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.DCOUNTA",
+      "name": "matching database records",
+      "formula": "=DCOUNTA([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.DMAX",
+      "name": "matching database records",
+      "formula": "=DMAX([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 30
+      }
+    },
+    {
+      "id": "function.DMIN",
+      "name": "matching database records",
+      "formula": "=DMIN([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 10
+      }
+    },
+    {
+      "id": "function.DPRODUCT",
+      "name": "matching database records",
+      "formula": "=DPRODUCT([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 300
+      }
+    },
+    {
+      "id": "function.DSTDEV",
+      "name": "matching database records",
+      "formula": "=DSTDEV([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 14.142135623730951
+      }
+    },
+    {
+      "id": "function.DSTDEVP",
+      "name": "matching database records",
+      "formula": "=DSTDEVP([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 10
+      }
+    },
+    {
+      "id": "function.DSUM",
+      "name": "matching database records",
+      "formula": "=DSUM([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 40
+      }
+    },
+    {
+      "id": "function.DVAR",
+      "name": "matching database records",
+      "formula": "=DVAR([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 200
+      }
+    },
+    {
+      "id": "function.DVARP",
+      "name": "matching database records",
+      "formula": "=DVARP([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 100
+      }
+    },
+    {
+      "id": "function.DGET",
+      "name": "single matching record",
+      "formula": "=DGET([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": {
+        "cell:D2": {
+          "_tag": "Text",
+          "value": "Bob"
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "limits.basic",
+      "name": "basic limits basic",
+      "formula": "=SUM(1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 30
+      }
+    },
+    {
+      "id": "syntax.criteria",
+      "name": "basic syntax criteria",
+      "formula": "=DCOUNT([.A1:.B4];\"Score\";[.D1:.D2])",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      },
+      "preset": "database"
+    },
+    {
+      "id": "syntax.numbers",
+      "name": "basic syntax numbers",
+      "formula": "=1.2E2",
+      "expected": {
+        "_tag": "Number",
+        "value": 120
+      }
+    },
+    {
+      "id": "syntax.strings",
+      "name": "basic syntax strings",
+      "formula": "=\"a\"\"b\"",
+      "expected": {
+        "_tag": "Text",
+        "value": "a\"b"
+      }
+    },
+    {
+      "id": "syntax.operators",
+      "name": "basic syntax operators",
+      "formula": "=1+2*3",
+      "expected": {
+        "_tag": "Number",
+        "value": 7
+      }
+    },
+    {
+      "id": "syntax.nonstandard-functions",
+      "name": "basic syntax nonstandard-functions",
+      "formula": "=ORG.DOUBLE(1)",
+      "expected": {
+        "_tag": "Error",
+        "code": "#NAME?"
+      }
+    },
+    {
+      "id": "syntax.named-expressions",
+      "name": "basic syntax named-expressions",
+      "formula": "=TAX*2",
+      "expected": {
+        "_tag": "Number",
+        "value": 6
+      },
+      "bindings": {
+        "name:TAX": {
+          "_tag": "Number",
+          "value": 3
+        }
+      }
+    },
+    {
+      "id": "syntax.errors",
+      "name": "basic syntax errors",
+      "formula": "=#N/A",
+      "expected": {
+        "_tag": "Error",
+        "code": "#N/A"
+      }
+    },
+    {
+      "id": "syntax.whitespace",
+      "name": "basic syntax whitespace",
+      "formula": "=  1 + 2  ",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "conversion.number",
+      "name": "basic conversion number",
+      "formula": "=\"2\"+1",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "conversion.logical",
+      "name": "basic conversion logical",
+      "formula": "=IF(1;2;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "conversion.text",
+      "name": "basic conversion text",
+      "formula": "=1&\"x\"",
+      "expected": {
+        "_tag": "Text",
+        "value": "1x"
+      }
+    },
+    {
+      "id": "conversion.reference",
+      "name": "basic conversion reference",
+      "formula": "=SUM([.A1:.A3])",
+      "expected": {
+        "_tag": "Number",
+        "value": 6
+      },
+      "preset": "lookup"
+    },
+    {
+      "id": "conversion.error",
+      "name": "basic conversion error",
+      "formula": "=#N/A+1",
+      "expected": {
+        "_tag": "Error",
+        "code": "#N/A"
+      }
+    },
+    {
+      "id": "operator.comparison",
+      "name": "basic operator comparison",
+      "formula": "=2<3",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "operator.concat",
+      "name": "basic operator concat",
+      "formula": "=\"a\"&\"b\"",
+      "expected": {
+        "_tag": "Text",
+        "value": "ab"
+      }
+    },
+    {
+      "id": "operator.add",
+      "name": "basic operator add",
+      "formula": "=1+2",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "operator.subtract",
+      "name": "basic operator subtract",
+      "formula": "=3-2",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "operator.multiply",
+      "name": "basic operator multiply",
+      "formula": "=2*3",
+      "expected": {
+        "_tag": "Number",
+        "value": 6
+      }
+    },
+    {
+      "id": "operator.divide",
+      "name": "basic operator divide",
+      "formula": "=4/2",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "operator.power",
+      "name": "basic operator power",
+      "formula": "=2^3",
+      "expected": {
+        "_tag": "Number",
+        "value": 8
+      }
+    },
+    {
+      "id": "operator.not-equal",
+      "name": "basic operator not-equal",
+      "formula": "=1<>2",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "operator.unary-minus",
+      "name": "basic operator unary-minus",
+      "formula": "=-2",
+      "expected": {
+        "_tag": "Number",
+        "value": -2
+      }
+    },
+    {
+      "id": "operator.intersection",
+      "name": "basic operator intersection",
+      "formula": "=SUM([.A1:.B2]![.B1:.C2])",
+      "expected": {
+        "_tag": "Number",
+        "value": 30
+      },
+      "preset": "lookup"
+    },
+    {
+      "id": "operator.range",
+      "name": "basic operator range",
+      "formula": "=SUM([.A1]:[.A3])",
+      "expected": {
+        "_tag": "Number",
+        "value": 6
+      },
+      "preset": "lookup"
+    },
+    {
+      "id": "function.AND",
+      "name": "basic function AND",
+      "formula": "=AND(TRUE();FALSE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "function.AVERAGE",
+      "name": "basic function AVERAGE",
+      "formula": "=AVERAGE(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.ISERR",
+      "name": "basic function ISERR",
+      "formula": "=ISERR(1/0)",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISLOGICAL",
+      "name": "basic function ISLOGICAL",
+      "formula": "=ISLOGICAL(TRUE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISNA",
+      "name": "basic function ISNA",
+      "formula": "=ISNA(NA())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISNONTEXT",
+      "name": "basic function ISNONTEXT",
+      "formula": "=ISNONTEXT(1)",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.MAX",
+      "name": "basic function MAX",
+      "formula": "=MAX(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.MIN",
+      "name": "basic function MIN",
+      "formula": "=MIN(1;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.NOT",
+      "name": "basic function NOT",
+      "formula": "=NOT(TRUE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "function.OR",
+      "name": "basic function OR",
+      "formula": "=OR(TRUE();FALSE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.SUM",
+      "name": "basic function SUM",
+      "formula": "=SUM(1;2)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.DATE",
+      "name": "month rollover",
+      "formula": "=DATE(2020;13;1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 44197
+      }
+    },
+    {
+      "id": "function.DAY",
+      "name": "day rollover",
+      "formula": "=DAY(DATE(2020;1;32))",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.WEEKDAY",
+      "name": "Monday first",
+      "formula": "=WEEKDAY(DATE(2020;1;1);2)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "approximate ordered match",
+      "formula": "=MATCH(2.5;[.A1:.A3])",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "approximate ordered match",
+      "formula": "=VLOOKUP(2.5;[.A1:.B3];2)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Number",
+        "value": 20
+      }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "entire column",
+      "formula": "=INDEX([.A1:.B3];0;2)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Range",
+        "rows": [
+          [
+            {
+              "_tag": "Number",
+              "value": 10
+            }
+          ],
+          [
+            {
+              "_tag": "Number",
+              "value": 20
+            }
+          ],
+          [
+            {
+              "_tag": "Number",
+              "value": 30
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "function.DCOUNTA",
+      "name": "omitted field",
+      "formula": "=DCOUNTA([.A1:.B4];;[.D1:.D2])",
+      "preset": "database",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.DCOUNT",
+      "name": "OR criteria rows",
+      "formula": "=DCOUNT([.A1:.B4];\"Score\";[.D1:.D3])",
+      "preset": "database",
+      "bindings": {
+        "cell:D3": {
+          "_tag": "Text",
+          "value": "Bob"
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.SUBSTITUTE",
+      "name": "empty old text unchanged",
+      "formula": "=SUBSTITUTE(\"abc\";\"\";\"x\")",
+      "expected": {
+        "_tag": "Text",
+        "value": "abc"
+      }
+    },
+    {
+      "id": "function.IRR",
+      "name": "nonzero return",
+      "formula": "=IRR([.E1:.E2])",
+      "preset": "cash",
+      "bindings": {
+        "cell:E2": {
+          "_tag": "Number",
+          "value": 110
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 0.1
+      },
+      "tolerance": 1e-08
+    },
+    {
+      "id": "function.RATE",
+      "name": "nonzero payment rate",
+      "formula": "=RATE(1;0;-100;110)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0.1
+      },
+      "tolerance": 1e-08
+    }
+  ],
+  "presets": {
+    "lookup": {
+      "cell:A1": {
+        "_tag": "Number",
+        "value": 1
+      },
+      "cell:B1": {
+        "_tag": "Number",
+        "value": 10
+      },
+      "cell:A2": {
+        "_tag": "Number",
+        "value": 2
+      },
+      "cell:B2": {
+        "_tag": "Number",
+        "value": 20
+      },
+      "cell:A3": {
+        "_tag": "Number",
+        "value": 3
+      },
+      "cell:B3": {
+        "_tag": "Number",
+        "value": 30
+      }
+    },
+    "horizontal": {
+      "cell:A1": {
+        "_tag": "Number",
+        "value": 1
+      },
+      "cell:B1": {
+        "_tag": "Number",
+        "value": 2
+      },
+      "cell:C1": {
+        "_tag": "Number",
+        "value": 3
+      },
+      "cell:A2": {
+        "_tag": "Number",
+        "value": 10
+      },
+      "cell:B2": {
+        "_tag": "Number",
+        "value": 20
+      },
+      "cell:C2": {
+        "_tag": "Number",
+        "value": 30
+      }
+    },
+    "database": {
+      "cell:A1": {
+        "_tag": "Text",
+        "value": "Name"
+      },
+      "cell:B1": {
+        "_tag": "Text",
+        "value": "Score"
+      },
+      "cell:A2": {
+        "_tag": "Text",
+        "value": "Alice"
+      },
+      "cell:B2": {
+        "_tag": "Number",
+        "value": 10
+      },
+      "cell:A3": {
+        "_tag": "Text",
+        "value": "Bob"
+      },
+      "cell:B3": {
+        "_tag": "Number",
+        "value": 20
+      },
+      "cell:A4": {
+        "_tag": "Text",
+        "value": "Alice"
+      },
+      "cell:B4": {
+        "_tag": "Number",
+        "value": 30
+      },
+      "cell:D1": {
+        "_tag": "Text",
+        "value": "Name"
+      },
+      "cell:D2": {
+        "_tag": "Text",
+        "value": "Alice"
+      }
+    },
+    "cash": {
+      "cell:E1": {
+        "_tag": "Number",
+        "value": -100
+      },
+      "cell:E2": {
+        "_tag": "Number",
+        "value": 100
+      }
+    }
+  }
 }

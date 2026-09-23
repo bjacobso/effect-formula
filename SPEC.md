@@ -4,7 +4,7 @@ Status: first-slice contract, 2026-09-23. [COMPATIBILITY.md](COMPATIBILITY.md) r
 
 ## 1. Goals and boundaries
 
-The engine evaluates formulas in TypeScript applications using Effect. It serves a grid, a form, and other hosts through the same core. The first release supports scalar values and rectangular ranges, deterministic recalculation, and a small function set. It does not promise complete Excel or OpenFormula compatibility, workbook file import/export, formatting, macros, external links, or dynamic array spilling.
+The engine evaluates formulas in TypeScript applications using Effect. It serves a grid, a form, and other hosts through the same core. It supports scalar values, rectangular ranges, recalculation, and sampled implementations of the Small Group functions. It does not promise complete Excel or OpenFormula compatibility, workbook file import/export, formatting, macros, external links, or dynamic array spilling.
 
 ## 2. Reference standards
 
@@ -24,7 +24,7 @@ Field references are an extension for form products. They identify stable field 
 
 ## 4. Values, errors, and conversions
 
-The public result is a tagged value: `Blank`, `Number`, `Text`, `Boolean`, `Error`, or a two-dimensional `Range` when an API explicitly requests a range. Numbers use finite JavaScript doubles initially; non-finite arithmetic returns a formula error. Dates are deferred until a serial-date system, timezone, and 1900/1904 compatibility policy are specified.
+The public result is a tagged value: `Blank`, `Number`, `Text`, `Boolean`, `Error`, or a two-dimensional `Range` when an API explicitly requests a range. Numbers use finite JavaScript doubles; non-finite arithmetic returns a formula error. Date and time functions use numeric serial values with a default UTC epoch of 1899-12-30. `EvalOptions.dateEpoch` selects a different ISO epoch and `EvalOptions.clock` supplies a deterministic clock for `NOW` and `TODAY`. Locale-sensitive date parsing, time zones, and Excel's 1900 date behavior remain outside the audited contract.
 
 Error values include at least `#DIV/0!`, `#VALUE!`, `#REF!`, `#NAME?`, `#NUM!`, and `#CYCLE!` (the last is a project extension). Formula errors propagate through calculations unless a function specifies handling. Host resolution failures, malformed input payloads, cancellation, and unexpected function defects are typed Effect failures; they are never silently converted to a blank or a formula error. Explicit host configuration may map a missing reference to `#REF!`.
 
@@ -54,7 +54,7 @@ createSession(options?: SessionOptions): Effect.Effect<FormulaSession, never, Re
 
 The host owns source values and reference identity. `spreadsheet()` maps A1 cells; `form(fields)` maps declared field keys. Both expose `set`, `get`, and `snapshot` over a calculation session. Unset spreadsheet cells and declared empty form fields are Blank; undeclared form fields give `#REF!`. The core neither stores UI state nor assumes all references are cells. The host decides how to authorize and scope data exposed to formula resolvers. Repeated form records and multiple sheets remain future work.
 
-Built-in functions have explicit arity and evaluation behavior in the evaluator. `configureFunctions` creates an Effect function profile: registered functions override built-ins, removed names return `#NAME?`, and removal takes precedence over registration. Registered functions receive eager values; built-in `IF` and `CHOOSE` evaluate only selected branches. Aggregates visit range entries in row-major order. Custom functions may return a formula value or typed Effect failure. The evaluator has configurable limits on expression length, parser nesting, range cells visited, and evaluation steps. Defaults are 10,000 characters, 100 parser levels, 10,000 range cells, and 100,000 evaluation steps.
+Built-in functions have explicit arity and evaluation behavior in the evaluator. `configureFunctions` creates an Effect function profile: registered functions override built-ins, removed names return `#NAME?`, and removal takes precedence over registration. Registered functions receive eager values; built-in `IF` and `CHOOSE` evaluate only selected branches. Aggregates visit range entries in row-major order. Custom functions may return a formula value or typed Effect failure. The evaluator has configurable limits on expression length, parser nesting, range cells visited, and evaluation steps. Defaults are 65,536 characters, 100 parser levels, 10,000 range cells, and 100,000 evaluation steps.
 
 ## 6. Dependencies and recalculation
 
@@ -64,7 +64,7 @@ The session recalculates affected formulas eagerly and serializes update batches
 
 ## 7. First function set
 
-The first slice implemented `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`. Conformance work has added a broader sampled set, including `CHOOSE`, `COUNTIF`, `SUMIF`, `AVERAGEIF`, information functions, common mathematics, and text functions. The conditional aggregates share whole-cell, case-insensitive criterion matching; regular expressions and wildcards are not enabled. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
+Every function listed in the ODF 1.4 Small Group has at least one passing example. Database functions operate on rectangular ranges with a header row and criteria rows. Conditional aggregates share whole-cell, case-insensitive criterion matching; regular expressions and wildcards are not enabled. Financial functions use numeric solvers for `IRR` and `RATE`, which can return `#NUM!` when they do not converge. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
 
 ## 8. Verification and compatibility claims
 
@@ -77,4 +77,4 @@ Publish a compatibility matrix with statuses `supported`, `partial`, `unsupporte
 1. Define whether an Excel profile should differ beyond the explicit comma argument separator.
 2. Define escaping for `]` in form field keys; the current adapter accepts only `[A-Za-z_][A-Za-z0-9_.-]*` keys.
 3. Select a package license and contribution policy before an installable package release or outside contributions.
-4. Define dates, locale input, cross-sheet references, and Excel profile scope after the scalar milestone.
+4. Define locale input, cross-sheet references, date time zones, and Excel profile scope after the scalar milestone.

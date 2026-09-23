@@ -4,13 +4,13 @@ This project implements an independent subset of [OpenFormula 1.4](https://docs.
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Scalars and formula errors | Supported subset | Blank, finite number, text, boolean, and common error values. Dates and complex numbers are absent. |
+| Scalars and formula errors | Supported subset | Blank, finite number, text, boolean, and common error values. Dates and times use numeric serials with a configurable epoch; complex numbers are absent. |
 | Operators | Supported subset | Unary signs, arithmetic, exponentiation, concatenation, and comparisons. Coercion uses the first-slice rules in `Value.ts`. |
 | References | Supported subset | One-sheet A1 cells, rectangular ranges, and form fields. No cross-sheet, named, or external references. |
-| Functions | Supported subset | Arithmetic, logic, aggregate, information, and text functions have representative passing examples. `COUNTIF`, `SUMIF`, and `AVERAGEIF` use whole-cell criteria matching without regular expressions or wildcards. Host profiles can register, override, or remove function names. The conformance report lists each required function separately. |
+| Functions | Sampled | All 110 Small Group functions have at least one passing example. Date, finance, lookup, database, aggregate, and text semantics still need section-level edge audits. Criteria use whole-cell matching without regular expressions or wildcards. Host profiles can register, override, or remove names. |
 | Recalculation | Project behavior | Batch updates, affected formula recalculation, cycles, async update serialization. |
 | Host adapters | Project behavior | Spreadsheet cells default to blank; declared form fields default to blank; unknown form fields produce `#REF!`. |
-| ODF Small Group | Incomplete | The strict gate is red; many required functions are missing and no requirement has completed a full section audit. |
+| ODF Small Group | Incomplete | All 141 tracked entries have passing samples; none has completed a full section audit. Full ODF reference syntax, host-defined locale behavior, and function boundary cases remain gaps. |
 | Excel compatibility | Partial | Explicit comma-argument parse option; no Excel compatibility claim. |
 
 The cases in `conformance/rules.json` run through `test/conformance.test.ts`; the group examples run through `test/openformula-cases.test.ts`. Host behavior is tested in `test/adapters.test.ts`. Run `pnpm conformance:report` for the group status or `pnpm check` for all passing checks. Differential comparisons against other engines are diagnostic only.

@@ -42,9 +42,10 @@ for (const item of obligations) {
   for (const sample of samples) {
     try {
       const ast = parseSync(sample.formula);
-      const values = new Map(Object.entries(sample.bindings ?? {}));
-      const actual = await Effect.runPromise(evaluate(ast).pipe(Effect.provide(Layer.merge(memory(values), emptyFunctions))));
-      if (JSON.stringify(actual) !== JSON.stringify(sample.expected)) failures.push({ name: sample.name, expected: sample.expected, actual });
+      const values = new Map(Object.entries({ ...corpus.presets?.[sample.preset ?? ""], ...sample.bindings }));
+      const actual = await Effect.runPromise(evaluate(ast, sample.clock ? { clock: () => new Date(sample.clock) } : {}).pipe(Effect.provide(Layer.merge(memory(values), emptyFunctions))));
+      const close = sample.tolerance !== undefined && actual._tag === "Number" && sample.expected._tag === "Number" && Math.abs(actual.value - sample.expected.value) <= sample.tolerance;
+      if (!close && JSON.stringify(actual) !== JSON.stringify(sample.expected)) failures.push({ name: sample.name, expected: sample.expected, actual });
     } catch (cause) {
       failures.push({ name: sample.name, error: String(cause) });
     }

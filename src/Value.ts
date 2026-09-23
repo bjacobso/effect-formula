@@ -8,6 +8,7 @@ export const FormulaErrorCode = Schema.Literal(
   "#NUM!",
   "#CYCLE!",
   "#N/A",
+  "#NULL!",
 );
 export type FormulaErrorCode = typeof FormulaErrorCode.Type;
 export const ScalarSchema = Schema.Union(

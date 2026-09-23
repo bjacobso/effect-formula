@@ -88,7 +88,10 @@ export const createSpreadsheet = (
   Effect.gen(function* () {
     const functions = yield* FunctionRegistry;
     const resolver = Layer.succeed(ReferenceResolver, {
-      get: (key: string) => Effect.succeed(key.startsWith("cell:") ? blank : error("#REF!")),
+      get: (key: string) =>
+        Effect.succeed(
+          key.startsWith("cell:") ? blank : error(key.startsWith("name:") ? "#NAME?" : "#REF!"),
+        ),
     });
     const registry = Layer.succeed(FunctionRegistry, functions);
     const session = yield* createSession(options).pipe(
@@ -118,7 +121,10 @@ export const createForm = (
     }
     const functions = yield* FunctionRegistry;
     const resolver = Layer.succeed(ReferenceResolver, {
-      get: (key: string) => Effect.succeed(declared.has(key) ? blank : error("#REF!")),
+      get: (key: string) =>
+        Effect.succeed(
+          declared.has(key) ? blank : error(key.startsWith("name:") ? "#NAME?" : "#REF!"),
+        ),
     });
     const registry = Layer.succeed(FunctionRegistry, functions);
     const session = yield* createSession(options).pipe(

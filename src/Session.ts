@@ -114,7 +114,9 @@ export const createSession = (
           for (const entry of updates) {
             if (
               !entry.key ||
-              !/^(?:cell:[A-Z]+[1-9][0-9]*|field:[A-Za-z_][A-Za-z0-9_.-]*)$/.test(entry.key)
+              !/^(?:cell:[A-Z]+[1-9][0-9]*|field:[A-Za-z_][A-Za-z0-9_.-]*|name:[A-Z_][A-Z0-9_.]*)$/.test(
+                entry.key,
+              )
             )
               return yield* Effect.fail(
                 new EvaluationFailure({ message: `Invalid reference key: ${entry.key}` }),

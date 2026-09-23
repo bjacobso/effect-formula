@@ -2,7 +2,7 @@
 
 An Effect-first TypeScript formula engine for products that need spreadsheet-style calculations. A spreadsheet can supply cells and ranges; a form builder can supply fields and records. Both use the same parser, value model, function registry, and evaluator.
 
-This repository contains a working first slice. [SPEC.md](SPEC.md) defines its behavior and limits; [PLAN.md](PLAN.md) tracks the remaining work.
+This repository contains a working engine and a growing OpenFormula compatibility corpus. [SPEC.md](SPEC.md) defines its behavior and limits; [PLAN.md](PLAN.md) tracks the remaining work.
 
 ## Direction
 
@@ -101,4 +101,4 @@ The public API exposes parsing, one-shot evaluation, and a stateful calculation 
 
 ## Status
 
-The parser, evaluator, range and field references, function profiles, recalculation session, and host adapters are implemented. `COUNTIF`, `SUMIF`, and `AVERAGEIF` now share a criterion matcher with whole-cell, case-insensitive text comparison. [conformance/rules.json](conformance/rules.json) records the original focused rule cases. The [OpenFormula conformance tracker](conformance/README.md) inventories functions listed in the ODF 1.4 Small, Medium, and Large evaluator groups, runs independently written examples, and reports missing coverage. Run `pnpm conformance:report` for the current Small Group status; `pnpm conformance:full` is an intentionally strict gate and currently fails. See [COMPATIBILITY.md](COMPATIBILITY.md) for the supported subset and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.
+The parser, evaluator, references, function profiles, recalculation session, and host adapters are implemented. Every function listed in the ODF 1.4 Small Group now has an implementation path and at least one passing example, including database, date, finance, lookup, statistical, and text functions. The [OpenFormula conformance tracker](conformance/README.md) also has a passing example for every tracked Small Group syntax, conversion, limit, and operator entry. Run `pnpm conformance:report` for the coverage summary. `pnpm conformance:full` remains red because no entry has completed a full section audit. See [COMPATIBILITY.md](COMPATIBILITY.md) for known gaps and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.

@@ -1,6 +1,6 @@
 import { Data, Effect } from "effect";
 import type { Scalar } from "./Value.js";
-import { bool, number, text } from "./Value.js";
+import { bool, error, number, text } from "./Value.js";
 
 export type Dialect = "openformula" | "excel";
 export interface ParseOptions {
@@ -21,7 +21,15 @@ export class ParseError extends Data.TaggedError("ParseError")<{
   readonly offset: number;
 }> {}
 interface Token {
-  readonly kind: "number" | "string" | "word" | "field" | "odfReference" | "symbol" | "eof";
+  readonly kind:
+    | "number"
+    | "string"
+    | "error"
+    | "word"
+    | "field"
+    | "odfReference"
+    | "symbol"
+    | "eof";
   readonly value: string;
   readonly offset: number;
 }
@@ -36,6 +44,12 @@ function lex(source: string): Token[] {
     }
     const offset = i;
     const rest = source.slice(i);
+    const constantError = /^#(?:DIV\/0!|VALUE!|REF!|NAME\?|NUM!|CYCLE!|N\/A|NULL!)/.exec(rest);
+    if (constantError) {
+      tokens.push({ kind: "error", value: constantError[0], offset });
+      i += constantError[0].length;
+      continue;
+    }
     const numeric = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?/.exec(rest);
     if (numeric) {
       tokens.push({ kind: "number", value: numeric[0], offset });
@@ -78,13 +92,13 @@ function lex(source: string): Token[] {
       i = end + 1;
       continue;
     }
-    const word = /^(?:\$?[A-Za-z_][A-Za-z0-9_.$]*)/.exec(rest);
+    const word = /^(?:\$\$|\$)?[A-Za-z_][A-Za-z0-9_.$]*/.exec(rest);
     if (word) {
       tokens.push({ kind: "word", value: word[0], offset });
       i += word[0].length;
       continue;
     }
-    const symbol = /^(?:<=|>=|<>|[+\-*/^&=<>():;,%])/.exec(rest);
+    const symbol = /^(?:<=|>=|<>|[+\-*/^&=<>():;,%!])/.exec(rest);
     if (symbol) {
       tokens.push({ kind: "symbol", value: symbol[0], offset });
       i += symbol[0].length;
@@ -108,6 +122,7 @@ const precedence: Readonly<Record<string, number>> = {
   "*": 4,
   "/": 4,
   "^": 6,
+  "!": 8,
 };
 class Reader {
   index = 0;
@@ -186,6 +201,8 @@ class Reader {
       return { _tag: "Literal", value };
     }
     if (token.kind === "string") return { _tag: "Literal", value: text(token.value) };
+    if (token.kind === "error")
+      return { _tag: "Literal", value: error(token.value as Parameters<typeof error>[0]) };
     if (token.kind === "odfReference") {
       const addresses = token.value
         .split(":")
@@ -216,13 +233,14 @@ class Reader {
         return { _tag: "Literal", value: bool(word === "TRUE") };
       if (cellPattern.test(word))
         return { _tag: "Reference", key: `cell:${word.replaceAll("$", "")}` };
-      this.fail(`Unknown name ${token.value}`);
+      const name = word.startsWith("$$") ? word.slice(2) : word;
+      return { _tag: "Reference", key: `name:${name}` };
     }
     this.fail("Expected expression");
   }
 }
 export function parseSync(formula: string, options: ParseOptions = {}): Ast {
-  if (formula.length > (options.maxLength ?? 10000))
+  if (formula.length > (options.maxLength ?? 65536))
     throw new ParseError({ message: "Formula length limit exceeded", offset: 0 });
   const source = formula.startsWith("==")
     ? formula.slice(2)

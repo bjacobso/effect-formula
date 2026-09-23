@@ -1,6 +1,11 @@
 import { Context, Data, Effect, Layer } from "effect";
 import { matchesCriterion } from "./Criterion.js";
 import type { Ast } from "./Parser.js";
+import { smallDatabase } from "./SmallDatabase.js";
+import { type DateOptions, smallDate } from "./SmallDate.js";
+import { smallExtra } from "./SmallExtra.js";
+import { smallFinance } from "./SmallFinance.js";
+import { smallLookup } from "./SmallLookup.js";
 import type { Scalar, Value } from "./Value.js";
 import {
   blank,
@@ -56,9 +61,10 @@ export function configureFunctions(config: FunctionConfiguration = {}) {
 }
 export const memory = (values: ReadonlyMap<string, Value>) =>
   Layer.succeed(ReferenceResolver, {
-    get: (key: string) => Effect.succeed(values.get(key) ?? error("#REF!")),
+    get: (key: string) =>
+      Effect.succeed(values.get(key) ?? error(key.startsWith("name:") ? "#NAME?" : "#REF!")),
   });
-export interface EvalOptions {
+export interface EvalOptions extends DateOptions {
   readonly maxSteps?: number;
   readonly maxRangeCells?: number;
 }
@@ -503,6 +509,23 @@ export function evaluate(
               : number(node.operator === "-" ? -value.value : value.value / 100);
           }
           case "Binary":
+            if (node.operator === "!") {
+              const left = referenceKeys(node.left, options.maxRangeCells ?? 10000);
+              const right = referenceKeys(node.right, options.maxRangeCells ?? 10000);
+              if (!left || !right) return error("#VALUE!");
+              const rightKeys = new Set(right.flat());
+              const common = left
+                .map((row) => row.filter((key) => rightKeys.has(key)))
+                .filter((row) => row.length);
+              if (!common.length) return error("#NULL!");
+              const rows: Scalar[][] = [];
+              for (const row of common) {
+                const values: Scalar[] = [];
+                for (const key of row) values.push(scalar(yield* resolver.get(key)));
+                rows.push(values);
+              }
+              return rows.length === 1 && rows[0]!.length === 1 ? rows[0]![0]! : range(rows);
+            }
             return arithmetic(
               node.operator,
               scalar(yield* visit(node.left)),
@@ -609,6 +632,16 @@ export function evaluate(
               return aggregate(name, args);
             const built = builtIn(name, args);
             if (built !== undefined) return built;
+            const extra = smallExtra(name, args);
+            if (extra !== undefined) return extra;
+            const dated = smallDate(name, args, options);
+            if (dated !== undefined) return dated;
+            const financed = smallFinance(name, args);
+            if (financed !== undefined) return financed;
+            const lookedUp = smallLookup(name, args);
+            if (lookedUp !== undefined) return lookedUp;
+            const database = smallDatabase(name, args);
+            if (database !== undefined) return database;
             return error("#NAME?");
           }
         }
