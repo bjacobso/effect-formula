@@ -1056,6 +1056,17 @@
       }
     },
     {
+      "id": "function.COUNTIF",
+      "name": "hexadecimal-looking criterion remains text",
+      "formula": "=COUNTIF([.A1:.A3];\"=0x10\")",
+      "bindings": {
+        "cell:A1": { "_tag": "Text", "value": "0x10" },
+        "cell:A2": { "_tag": "Number", "value": 16 },
+        "cell:A3": { "_tag": "Text", "value": "0X10" }
+      },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
       "id": "function.SUMIF",
       "name": "offset result range",
       "formula": "=SUMIF([.A1:.A3];\">1\";[.B1])",
@@ -1087,6 +1098,45 @@
       }
     },
     {
+      "id": "function.SUMIF",
+      "name": "hexadecimal-looking criterion selects text cells",
+      "formula": "=SUMIF([.A1:.A3];\"=0x10\";[.B1])",
+      "bindings": {
+        "cell:A1": { "_tag": "Text", "value": "0x10" },
+        "cell:A2": { "_tag": "Number", "value": 16 },
+        "cell:A3": { "_tag": "Text", "value": "0X10" },
+        "cell:B1": { "_tag": "Number", "value": 10 },
+        "cell:B2": { "_tag": "Number", "value": 20 },
+        "cell:B3": { "_tag": "Number", "value": 30 }
+      },
+      "expected": { "_tag": "Number", "value": 40 }
+    },
+    {
+      "id": "function.SUMIF",
+      "name": "result cells beyond grid bounds are ignored",
+      "formula": "=SUMIF([.A1:.A2];\">0\";[.B2])",
+      "grid": { "rows": 2, "columns": 2 },
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Number", "value": 1 },
+        "cell:B2": { "_tag": "Number", "value": 5 },
+        "cell:B3": { "_tag": "Number", "value": 100 }
+      },
+      "expected": { "_tag": "Number", "value": 5 }
+    },
+    {
+      "id": "function.SUMIF",
+      "name": "result columns beyond grid bounds are ignored",
+      "formula": "=SUMIF([.A1:.B1];\">0\";[.B1])",
+      "grid": { "rows": 1, "columns": 2 },
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 5 },
+        "cell:C1": { "_tag": "Number", "value": 100 }
+      },
+      "expected": { "_tag": "Number", "value": 5 }
+    },
+    {
       "id": "function.AVERAGEIF",
       "name": "average matching cells",
       "formula": "=AVERAGEIF([.A1:.A3];\">1\")",
@@ -1108,6 +1158,18 @@
         "_tag": "Number",
         "value": 2.5
       }
+    },
+    {
+      "id": "function.AVERAGEIF",
+      "name": "large matching numbers have finite average",
+      "formula": "=AVERAGEIF([.A1:.A2];\">0\";[.B1])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 1e308 },
+        "cell:B2": { "_tag": "Number", "value": 1e308 }
+      },
+      "expected": { "_tag": "Number", "value": 1e308 }
     },
     {
       "id": "function.PRODUCT",

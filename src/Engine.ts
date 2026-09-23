@@ -638,23 +638,33 @@ export function evaluate(
               }
               let matched = 0;
               let sum = 0;
-              let numbers = 0;
+              const averageValues: number[] = [];
               for (let row = 0; row < sourceKeys.value.length; row++)
                 for (let col = 0; col < sourceKeys.value[row]!.length; col++) {
                   const candidate = scalar(yield* resolver.get(sourceKeys.value[row]![col]!));
                   if (!matchesCriterion(candidate, criterion)) continue;
                   matched++;
                   if (name === "COUNTIF") continue;
-                  const value = scalar(yield* resolver.get(resultKeys[row]![col]!));
+                  const resultKey = resultKeys[row]![col]!;
+                  if (name === "SUMIF" && options.grid) {
+                    const address = parseAddress(resultKey);
+                    if (
+                      Option.isSome(address) &&
+                      (address.value.row > options.grid.rows ||
+                        address.value.column > options.grid.columns)
+                    )
+                      continue;
+                  }
+                  const value = scalar(yield* resolver.get(resultKey));
                   if (isError(value)) return value;
                   if (value._tag === "Number") {
-                    sum += value.value;
-                    numbers++;
+                    if (name === "SUMIF") sum += value.value;
+                    else averageValues.push(value.value);
                   }
                 }
               if (name === "COUNTIF") return number(matched);
               if (name === "SUMIF") return number(sum);
-              return numbers ? number(sum / numbers) : error("#DIV/0!");
+              return averageValues.length ? number(average(averageValues)) : error("#DIV/0!");
             }
             if (name === "CHOOSE") {
               if (node.args.length < 2) return error("#VALUE!");

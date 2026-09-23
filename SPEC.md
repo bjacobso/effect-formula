@@ -78,6 +78,8 @@ The session recalculates affected formulas eagerly and serializes update batches
 
 Every function listed in the ODF 1.4 Small Group has at least one passing example. Database functions operate on rectangular ranges with a header row and criteria rows. Conditional aggregates share whole-cell, case-insensitive criterion matching; regular expressions and wildcards are not enabled. Financial functions use numeric solvers for `IRR` and `RATE`, which can return `#NUM!` when they do not converge. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
 
+Conditional aggregate criteria use the engine's invariant decimal Text-to-Number conversion, so prefixes such as `0x` remain Text. `SUMIF` ignores expanded result cells beyond configured grid bounds. `AVERAGEIF` uses the same scaled average calculation as `AVERAGE`.
+
 ## 8. Verification and compatibility claims
 
 Checked semantic rules have table-driven cases with source section, input values, and expected result. The current suite covers parser precedence, escapes, reference resolution, coercion, error propagation, lazy branches, cycles, incremental updates, and an asynchronous update race. Cancellation and full section-level edge cases remain future work. Differential runs against other engines may help discover mismatches, but their output is diagnostic rather than an oracle.

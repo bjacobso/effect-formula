@@ -1,5 +1,5 @@
 import type { Scalar } from "./Value.js";
-import { isError, number } from "./Value.js";
+import { isError, number, text, toNumber } from "./Value.js";
 
 /** The default criterion profile uses whole-cell, case-insensitive text matching. */
 export function matchesCriterion(cell: Scalar, input: Scalar): boolean {
@@ -16,8 +16,8 @@ export function matchesCriterion(cell: Scalar, input: Scalar): boolean {
     return operator === "=" ? cell._tag === "Blank" : operator === "<>" && cell._tag !== "Blank";
   if (cell._tag === "Blank") return operator === "<>";
 
-  const numeric = raw.trim() !== "" && Number.isFinite(Number(raw.trim()));
-  const target: Scalar = numeric ? number(Number(raw.trim())) : { _tag: "Text", value: raw };
+  const converted = raw.trim() === "" ? text(raw) : toNumber(text(raw));
+  const target: Scalar = isError(converted) ? text(raw) : converted;
   if (cell._tag !== target._tag) return operator === "<>";
   const left = cell._tag === "Text" ? cell.value.toLowerCase() : cell.value;
   const right = target._tag === "Text" ? target.value.toLowerCase() : target.value;

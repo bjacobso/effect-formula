@@ -1,5 +1,7 @@
-/** Scale before summing so a finite mean does not overflow with its inputs. */
+/** Use ordinary summation when finite; scale only when intermediates overflow. */
 export function average(values: readonly number[]): number {
+  const sum = values.reduce((total, value) => total + value, 0);
+  if (Number.isFinite(sum)) return sum / values.length;
   const scale = values.reduce((largest, value) => Math.max(largest, Math.abs(value)), 0);
   if (scale === 0) return 0;
   return (values.reduce((sum, value) => sum + value / scale, 0) / values.length) * scale;
