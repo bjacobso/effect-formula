@@ -25,7 +25,9 @@ const run = (formula: string, values: ReadonlyMap<string, Value> = new Map()) =>
 describe("one-shot evaluation", () => {
   it("parses precedence, exponentiation, strings, and explicit dialects", async () => {
     expect(await run("=2+3*4")).toEqual(number(14));
-    expect(await run("=-2^2")).toEqual(number(-4));
+    expect(await run("=-2^2")).toEqual(number(4));
+    expect(await run("=2^3^2")).toEqual(number(64));
+    expect(parseSync("=-2^2", { dialect: "excel" })).toMatchObject({ _tag: "Unary" });
     expect(await run('="a""b"&"c"')).toEqual(text('a"bc'));
     expect(await run("=SUM(1;2;3)")).toEqual(number(6));
     expect(parseSync("=SUM(1,2,3)", { dialect: "excel" })).toMatchObject({

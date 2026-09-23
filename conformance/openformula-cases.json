@@ -1,0 +1,488 @@
+{
+  "source": "OpenFormula 1.4",
+  "cases": [
+    {
+      "id": "operator.percent",
+      "name": "percentage of literal",
+      "formula": "=25%",
+      "expected": {
+        "_tag": "Number",
+        "value": 0.25
+      }
+    },
+    {
+      "id": "function.TRUE",
+      "name": "true constant function",
+      "formula": "=TRUE()",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.FALSE",
+      "name": "false constant function",
+      "formula": "=FALSE()",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "function.PI",
+      "name": "pi constant",
+      "formula": "=PI()",
+      "expected": {
+        "_tag": "Number",
+        "value": 3.141592653589793
+      }
+    },
+    {
+      "id": "function.NA",
+      "name": "not available error",
+      "formula": "=NA()",
+      "expected": {
+        "_tag": "Error",
+        "code": "#N/A"
+      }
+    },
+    {
+      "id": "function.ABS",
+      "name": "absolute value",
+      "formula": "=ABS(-3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.POWER",
+      "name": "power",
+      "formula": "=POWER(2;3)",
+      "expected": {
+        "_tag": "Number",
+        "value": 8
+      }
+    },
+    {
+      "id": "function.SQRT",
+      "name": "square root",
+      "formula": "=SQRT(9)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.MOD",
+      "name": "remainder follows divisor sign",
+      "formula": "=MOD(-3;2)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.INT",
+      "name": "floor negative number",
+      "formula": "=INT(-2.3)",
+      "expected": {
+        "_tag": "Number",
+        "value": -3
+      }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "half away from zero",
+      "formula": "=ROUND(-2.5)",
+      "expected": {
+        "_tag": "Number",
+        "value": -3
+      }
+    },
+    {
+      "id": "function.COUNTA",
+      "name": "nonblank range entries",
+      "formula": "=COUNTA(A1:A3)",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 1
+        },
+        "cell:A2": {
+          "_tag": "Blank"
+        },
+        "cell:A3": {
+          "_tag": "Text",
+          "value": "x"
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.COUNTBLANK",
+      "name": "blank range entries",
+      "formula": "=COUNTBLANK(A1:A3)",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 1
+        },
+        "cell:A2": {
+          "_tag": "Blank"
+        },
+        "cell:A3": {
+          "_tag": "Text",
+          "value": "x"
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.ISERROR",
+      "name": "error argument",
+      "formula": "=ISERROR(1/0)",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISNUMBER",
+      "name": "numeric argument",
+      "formula": "=ISNUMBER(3)",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISTEXT",
+      "name": "text argument",
+      "formula": "=ISTEXT(\"x\")",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.ISBLANK",
+      "name": "blank reference",
+      "formula": "=ISBLANK(A1)",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Blank"
+        }
+      },
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.IF",
+      "name": "single true argument",
+      "formula": "=IF(TRUE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "function.IF",
+      "name": "single false argument",
+      "formula": "=IF(FALSE())",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "operator.equal",
+      "name": "different types are unequal",
+      "formula": "=1=\"1\"",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "operator.equal",
+      "name": "logical distinct from number",
+      "formula": "=TRUE()=1",
+      "expected": {
+        "_tag": "Boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "operator.unary-plus",
+      "name": "does not convert text",
+      "formula": "+\"hello\"",
+      "expected": {
+        "_tag": "Text",
+        "value": "hello"
+      }
+    },
+    {
+      "id": "function.COUNT",
+      "name": "range error is ignored",
+      "formula": "=COUNT([.A1:.A3])",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 5
+        },
+        "cell:A2": {
+          "_tag": "Error",
+          "code": "#DIV/0!"
+        },
+        "cell:A3": {
+          "_tag": "Text",
+          "value": "x"
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "syntax.functions",
+      "name": "empty selected IF branch",
+      "formula": "=IF(TRUE();;2)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "syntax.functions",
+      "name": "empty false IF branch",
+      "formula": "=IF(FALSE();1;)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "syntax.references",
+      "name": "bracket cell reference",
+      "formula": "=[.A1]",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 7
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 7
+      }
+    },
+    {
+      "id": "syntax.references",
+      "name": "bracket range",
+      "formula": "=SUM([.A1:.A2])",
+      "bindings": {
+        "cell:A1": {
+          "_tag": "Number",
+          "value": 2
+        },
+        "cell:A2": {
+          "_tag": "Number",
+          "value": 3
+        }
+      },
+      "expected": {
+        "_tag": "Number",
+        "value": 5
+      }
+    },
+    {
+      "id": "syntax.basic-expressions",
+      "name": "forced recalculate marker",
+      "formula": "==2+3",
+      "expected": {
+        "_tag": "Number",
+        "value": 5
+      }
+    },
+    {
+      "id": "function.ACOS",
+      "name": "arc cosine one",
+      "formula": "=ACOS(1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.ASIN",
+      "name": "arc sine zero",
+      "formula": "=ASIN(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.ATAN",
+      "name": "arc tangent zero",
+      "formula": "=ATAN(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.ATAN2",
+      "name": "x then y coordinates",
+      "formula": "=ATAN2(1;0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.COS",
+      "name": "cosine zero",
+      "formula": "=COS(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.SIN",
+      "name": "sine zero",
+      "formula": "=SIN(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.TAN",
+      "name": "tangent zero",
+      "formula": "=TAN(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.EXP",
+      "name": "exponent zero",
+      "formula": "=EXP(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.LN",
+      "name": "natural log one",
+      "formula": "=LN(1)",
+      "expected": {
+        "_tag": "Number",
+        "value": 0
+      }
+    },
+    {
+      "id": "function.LOG10",
+      "name": "base ten log",
+      "formula": "=LOG10(100)",
+      "expected": {
+        "_tag": "Number",
+        "value": 2
+      }
+    },
+    {
+      "id": "function.DEGREES",
+      "name": "pi radians",
+      "formula": "=DEGREES(PI())",
+      "expected": {
+        "_tag": "Number",
+        "value": 180
+      }
+    },
+    {
+      "id": "function.RADIANS",
+      "name": "180 degrees",
+      "formula": "=RADIANS(180)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3.141592653589793
+      }
+    },
+    {
+      "id": "function.EVEN",
+      "name": "round negative away from zero",
+      "formula": "=EVEN(-3)",
+      "expected": {
+        "_tag": "Number",
+        "value": -4
+      }
+    },
+    {
+      "id": "function.ODD",
+      "name": "zero becomes one",
+      "formula": "=ODD(0)",
+      "expected": {
+        "_tag": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "function.FACT",
+      "name": "five factorial",
+      "formula": "=FACT(5)",
+      "expected": {
+        "_tag": "Number",
+        "value": 120
+      }
+    },
+    {
+      "id": "function.LOG",
+      "name": "custom base",
+      "formula": "=LOG(8;2)",
+      "expected": {
+        "_tag": "Number",
+        "value": 3
+      }
+    },
+    {
+      "id": "function.TRUNC",
+      "name": "negative toward zero",
+      "formula": "=TRUNC(-2.9)",
+      "expected": {
+        "_tag": "Number",
+        "value": -2
+      }
+    },
+    { "id": "function.LEN", "name": "Unicode code points", "formula": "=LEN(\"A😀\")", "expected": { "_tag": "Number", "value": 2 } },
+    { "id": "function.LEFT", "name": "first Unicode character", "formula": "=LEFT(\"😀abc\")", "expected": { "_tag": "Text", "value": "😀" } },
+    { "id": "function.RIGHT", "name": "last two characters", "formula": "=RIGHT(\"abcd\";2)", "expected": { "_tag": "Text", "value": "cd" } },
+    { "id": "function.MID", "name": "middle substring", "formula": "=MID(\"abcd\";2;2)", "expected": { "_tag": "Text", "value": "bc" } },
+    { "id": "function.LOWER", "name": "lowercase text", "formula": "=LOWER(\"AbC\")", "expected": { "_tag": "Text", "value": "abc" } },
+    { "id": "function.UPPER", "name": "uppercase text", "formula": "=UPPER(\"AbC\")", "expected": { "_tag": "Text", "value": "ABC" } },
+    { "id": "function.TRIM", "name": "collapse whitespace", "formula": "=TRIM(\"  a   b  \" )", "expected": { "_tag": "Text", "value": "a b" } },
+    { "id": "function.EXACT", "name": "case sensitive comparison", "formula": "=EXACT(\"a\";\"A\")", "expected": { "_tag": "Boolean", "value": false } },
+    { "id": "function.FIND", "name": "one based substring position", "formula": "=FIND(\"bc\";\"abcd\")", "expected": { "_tag": "Number", "value": 2 } },
+    { "id": "function.FIND", "name": "missing substring", "formula": "=FIND(\"x\";\"abcd\")", "expected": { "_tag": "Error", "code": "#VALUE!" } },
+    { "id": "function.REPT", "name": "repeat text", "formula": "=REPT(\"ab\";3)", "expected": { "_tag": "Text", "value": "ababab" } },
+    { "id": "function.N", "name": "boolean to number", "formula": "=N(TRUE())", "expected": { "_tag": "Number", "value": 1 } },
+    { "id": "function.T", "name": "nontext to empty text", "formula": "=T(7)", "expected": { "_tag": "Text", "value": "" } },
+    { "id": "function.VALUE", "name": "numeric text", "formula": "=VALUE(\"12.5\")", "expected": { "_tag": "Number", "value": 12.5 } },
+    { "id": "function.CHOOSE", "name": "selected branch only", "formula": "=CHOOSE(2;1/0;42)", "expected": { "_tag": "Number", "value": 42 } },
+    { "id": "function.ROWS", "name": "row count", "formula": "=ROWS([.A1:.C2])", "expected": { "_tag": "Number", "value": 2 } },
+    { "id": "function.COLUMNS", "name": "column count", "formula": "=COLUMNS([.A1:.C2])", "expected": { "_tag": "Number", "value": 3 } }
+  ]
+}

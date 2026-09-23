@@ -18,7 +18,7 @@ The parser accepts a leading `=` and an expression. The first core dialect uses 
 
 The initial grammar covers finite numeric literals, double-quoted strings with doubled quote escapes, `TRUE` and `FALSE`, parentheses, unary `+` and `-`, `+ - * / ^ &`, `= <> < <= > >=`, function calls, cell references such as `A1` and `$A$1`, rectangular ranges such as `A1:B5`, and form field references such as `[quantity]`. Function names are case insensitive and normalized in the AST. Whitespace is insignificant except inside strings and field names. Parser errors include an offset and expected token information.
 
-Precedence and associativity follow the selected dialect and are tested with ambiguous examples, especially exponentiation versus unary minus and comparison chains. **Decision to validate:** settle exact Excel-style precedence against documented examples before labeling that dialect compatible.
+Precedence and associativity follow the selected dialect and are tested with ambiguous examples. The default OpenFormula dialect places unary signs above exponentiation and associates exponentiation left to right, following the ODF operator precedence table. The Excel option preserves its separate precedence behavior, but remains a partial parser profile without an Excel compatibility claim.
 
 Field references are an extension for form products. They identify stable field keys, not visible labels. `]` escaping and key validation must be fixed before implementation. Cross-sheet references, named ranges, unions/intersections, array literals, structured table references, and locale syntax are later milestones.
 
@@ -38,7 +38,7 @@ Conversions are centralized. The current first-slice rules are:
 | Direct aggregate argument | ignored | included | finite numeric text included; other text gives `#VALUE!` | included as `0` or `1` | propagates |
 | Range aggregate entry | ignored | included | ignored | ignored | propagates |
 
-Comparisons use numeric ordering when both inputs are Numbers. Otherwise both are converted to text and compared without case sensitivity. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type comparison rules need further audit.
+Equality compares like types, with case-insensitive text comparison; different types compare unequal. Ordering uses numeric ordering when both inputs are Numbers and text ordering otherwise. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type ordering need further audit.
 
 ## 5. Evaluation and Effect API
 
@@ -64,7 +64,7 @@ The session recalculates affected formulas eagerly and serializes update batches
 
 ## 7. First function set
 
-The first slice implements `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`, plus the operators in section 3. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and [conformance/rules.json](conformance/rules.json) records checked rule cases and unsupported areas. Fuller function edge-case tests remain compatibility work.
+The first slice implemented `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`. Conformance work has added a broader sampled set, including `CHOOSE`, information functions, common mathematics, and text functions. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and the [group tracker](conformance/README.md) lists required functions and independently written examples. Fuller function edge-case tests remain compatibility work.
 
 ## 8. Verification and compatibility claims
 

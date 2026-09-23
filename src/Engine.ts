@@ -2,6 +2,7 @@ import { Context, Data, Effect, Layer } from "effect";
 import type { Ast } from "./Parser.js";
 import type { Scalar, Value } from "./Value.js";
 import {
+  blank,
   bool,
   entries,
   error,
@@ -89,6 +90,26 @@ function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
     return isError(a) ? a : isError(b) ? b : text(a.value + b.value);
   }
   if (["=", "<>", "<", "<=", ">", ">="].includes(op)) {
+    if (op === "=" || op === "<>") {
+      let equal = false;
+      if (left._tag === right._tag) {
+        switch (left._tag) {
+          case "Blank":
+            equal = true;
+            break;
+          case "Number":
+            equal = left.value === (right as typeof left).value;
+            break;
+          case "Boolean":
+            equal = left.value === (right as typeof left).value;
+            break;
+          case "Text":
+            equal = left.value.toLowerCase() === (right as typeof left).value.toLowerCase();
+            break;
+        }
+      }
+      return bool(op === "=" ? equal : !equal);
+    }
     const numeric = left._tag === "Number" && right._tag === "Number";
     const a = numeric ? left.value : toText(left);
     const b = numeric ? (right as Extract<Scalar, { _tag: "Number" }>).value : toText(right);
@@ -132,6 +153,9 @@ function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
 }
 function aggregate(name: string, args: readonly Value[]): Scalar {
   const values = args.flatMap(entries);
+  if (name === "COUNT") return number(values.filter((value) => value._tag === "Number").length);
+  if (name === "COUNTA") return number(values.filter((value) => value._tag !== "Blank").length);
+  if (name === "COUNTBLANK") return number(values.filter((value) => value._tag === "Blank").length);
   const failed = values.find(isError);
   if (failed) return failed;
   const numbers: number[] = [];
@@ -146,8 +170,6 @@ function aggregate(name: string, args: readonly Value[]): Scalar {
     }
   }
   switch (name) {
-    case "COUNT":
-      return number(numbers.length);
     case "SUM":
       return number(numbers.reduce((a, b) => a + b, 0));
     case "AVERAGE":
@@ -159,6 +181,240 @@ function aggregate(name: string, args: readonly Value[]): Scalar {
     default:
       return number(numbers.length ? Math.max(...numbers) : 0);
   }
+}
+function builtIn(name: string, args: readonly Value[]): Scalar | undefined {
+  const unary = (fn: (value: number) => number): Scalar => {
+    if (args.length !== 1) return error("#VALUE!");
+    const value = toNumber(scalar(args[0]!));
+    return isError(value) ? value : number(fn(value.value));
+  };
+  const binary = (fn: (left: number, right: number) => Scalar): Scalar => {
+    if (args.length !== 2) return error("#VALUE!");
+    const left = toNumber(scalar(args[0]!));
+    const right = toNumber(scalar(args[1]!));
+    if (isError(left)) return left;
+    if (isError(right)) return right;
+    return fn(left.value, right.value);
+  };
+  const stringArg = (index: number): Extract<Scalar, { _tag: "Text" | "Error" }> =>
+    toText(scalar(args[index]!));
+  const countArg = (index: number): Extract<Scalar, { _tag: "Number" | "Error" }> =>
+    toNumber(scalar(args[index]!));
+  switch (name) {
+    case "TRUE":
+      return args.length ? error("#VALUE!") : bool(true);
+    case "FALSE":
+      return args.length ? error("#VALUE!") : bool(false);
+    case "PI":
+      return args.length ? error("#VALUE!") : number(Math.PI);
+    case "NA":
+      return args.length ? error("#VALUE!") : error("#N/A");
+    case "ABS":
+      return unary(Math.abs);
+    case "ACOS":
+      return unary(Math.acos);
+    case "ASIN":
+      return unary(Math.asin);
+    case "ATAN":
+      return unary(Math.atan);
+    case "COS":
+      return unary(Math.cos);
+    case "SIN":
+      return unary(Math.sin);
+    case "TAN":
+      return unary(Math.tan);
+    case "EXP":
+      return unary(Math.exp);
+    case "LN":
+      return unary(Math.log);
+    case "LOG10":
+      return unary(Math.log10);
+    case "DEGREES":
+      return unary((value) => (value * 180) / Math.PI);
+    case "RADIANS":
+      return unary((value) => (value * Math.PI) / 180);
+    case "EVEN":
+      return unary((value) => Math.sign(value) * Math.ceil(Math.abs(value) / 2) * 2);
+    case "ODD":
+      return unary((value) =>
+        value === 0 ? 1 : Math.sign(value) * (2 * Math.ceil((Math.abs(value) - 1) / 2) + 1),
+      );
+    case "FACT":
+      return unary((value) => {
+        const n = Math.trunc(value);
+        if (n < 0 || n > 170) return Number.NaN;
+        let result = 1;
+        for (let i = 2; i <= n; i++) result *= i;
+        return result;
+      });
+    case "SQRT":
+      return unary(Math.sqrt);
+    case "INT":
+      return unary(Math.floor);
+    case "POWER":
+      return binary((left, right) => number(left ** right));
+    case "ATAN2":
+      return binary((x, y) => (x === 0 && y === 0 ? error("#NUM!") : number(Math.atan2(y, x))));
+    case "MOD":
+      return binary((left, right) =>
+        right === 0 ? error("#DIV/0!") : number(left - right * Math.floor(left / right)),
+      );
+    case "ROUND": {
+      if (args.length < 1 || args.length > 2) return error("#VALUE!");
+      const value = toNumber(scalar(args[0]!));
+      const digits = args[1] ? toNumber(scalar(args[1])) : number(0);
+      if (isError(value)) return value;
+      if (isError(digits)) return digits;
+      const factor = 10 ** Math.trunc(digits.value);
+      return number((Math.sign(value.value) * Math.round(Math.abs(value.value) * factor)) / factor);
+    }
+    case "LOG": {
+      if (args.length < 1 || args.length > 2) return error("#VALUE!");
+      const value = toNumber(scalar(args[0]!));
+      const base = args[1] ? toNumber(scalar(args[1])) : number(10);
+      if (isError(value)) return value;
+      if (isError(base)) return base;
+      return value.value <= 0 || base.value <= 0 || base.value === 1
+        ? error("#NUM!")
+        : number(Math.log(value.value) / Math.log(base.value));
+    }
+    case "TRUNC": {
+      if (args.length < 1 || args.length > 2) return error("#VALUE!");
+      const value = toNumber(scalar(args[0]!));
+      const digits = args[1] ? toNumber(scalar(args[1])) : number(0);
+      if (isError(value)) return value;
+      if (isError(digits)) return digits;
+      const factor = 10 ** Math.trunc(digits.value);
+      return number(Math.trunc(value.value * factor) / factor);
+    }
+    case "LEN":
+    case "LOWER":
+    case "UPPER":
+    case "TRIM": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = stringArg(0);
+      if (isError(value)) return value;
+      if (name === "LEN") return number(Array.from(value.value).length);
+      if (name === "LOWER") return text(value.value.toLowerCase());
+      if (name === "UPPER") return text(value.value.toUpperCase());
+      return text(value.value.replace(/^[\t\n\r ]+|[\t\n\r ]+$/g, "").replace(/[\t\n\r ]+/g, " "));
+    }
+    case "LEFT":
+    case "RIGHT": {
+      if (args.length < 1 || args.length > 2) return error("#VALUE!");
+      const value = stringArg(0);
+      const length = args.length === 2 ? countArg(1) : number(1);
+      if (isError(value)) return value;
+      if (isError(length)) return length;
+      if (length.value < 0) return error("#VALUE!");
+      const chars = Array.from(value.value);
+      const n = Math.trunc(length.value);
+      return text(
+        (name === "LEFT" ? chars.slice(0, n) : chars.slice(Math.max(0, chars.length - n))).join(""),
+      );
+    }
+    case "MID": {
+      if (args.length !== 3) return error("#VALUE!");
+      const value = stringArg(0);
+      const start = countArg(1);
+      const length = countArg(2);
+      if (isError(value)) return value;
+      if (isError(start)) return start;
+      if (isError(length)) return length;
+      if (start.value < 1 || length.value < 0) return error("#VALUE!");
+      return text(
+        Array.from(value.value)
+          .slice(
+            Math.trunc(start.value) - 1,
+            Math.trunc(start.value) - 1 + Math.trunc(length.value),
+          )
+          .join(""),
+      );
+    }
+    case "EXACT": {
+      if (args.length !== 2) return error("#VALUE!");
+      const left = stringArg(0);
+      const right = stringArg(1);
+      return isError(left) ? left : isError(right) ? right : bool(left.value === right.value);
+    }
+    case "FIND": {
+      if (args.length < 2 || args.length > 3) return error("#VALUE!");
+      const needle = stringArg(0);
+      const haystack = stringArg(1);
+      const start = args.length === 3 ? countArg(2) : number(1);
+      if (isError(needle)) return needle;
+      if (isError(haystack)) return haystack;
+      if (isError(start)) return start;
+      const chars = Array.from(haystack.value);
+      const index = Math.trunc(start.value) - 1;
+      if (index < 0 || index > chars.length) return error("#VALUE!");
+      const position = chars.slice(index).join("").indexOf(needle.value);
+      return position < 0
+        ? error("#VALUE!")
+        : number(index + Array.from(chars.slice(index).join("").slice(0, position)).length + 1);
+    }
+    case "REPT": {
+      if (args.length !== 2) return error("#VALUE!");
+      const value = stringArg(0);
+      const count = countArg(1);
+      if (isError(value)) return value;
+      if (isError(count)) return count;
+      if (count.value < 0 || count.value > 32767) return error("#VALUE!");
+      return text(value.value.repeat(Math.trunc(count.value)));
+    }
+    case "N": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = scalar(args[0]!);
+      return isError(value)
+        ? value
+        : value._tag === "Number"
+          ? value
+          : value._tag === "Boolean"
+            ? number(value.value ? 1 : 0)
+            : number(0);
+    }
+    case "T": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = scalar(args[0]!);
+      return isError(value) ? value : value._tag === "Text" ? value : text("");
+    }
+    case "VALUE": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = stringArg(0);
+      return isError(value) ? value : toNumber(value);
+    }
+    case "ROWS":
+    case "COLUMNS": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = args[0]!;
+      if (isError(value)) return value;
+      if (value._tag !== "Range") return number(1);
+      return number(name === "ROWS" ? value.rows.length : (value.rows[0]?.length ?? 0));
+    }
+    case "ISBLANK":
+      return args.length === 1 ? bool(scalar(args[0]!)._tag === "Blank") : error("#VALUE!");
+    case "ISERROR":
+      return args.length === 1 ? bool(isError(scalar(args[0]!))) : error("#VALUE!");
+    case "ISERR": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = scalar(args[0]!);
+      return bool(isError(value) && value.code !== "#N/A");
+    }
+    case "ISNA": {
+      if (args.length !== 1) return error("#VALUE!");
+      const value = scalar(args[0]!);
+      return bool(isError(value) && value.code === "#N/A");
+    }
+    case "ISNUMBER":
+      return args.length === 1 ? bool(scalar(args[0]!)._tag === "Number") : error("#VALUE!");
+    case "ISTEXT":
+      return args.length === 1 ? bool(scalar(args[0]!)._tag === "Text") : error("#VALUE!");
+    case "ISLOGICAL":
+      return args.length === 1 ? bool(scalar(args[0]!)._tag === "Boolean") : error("#VALUE!");
+    case "ISNONTEXT":
+      return args.length === 1 ? bool(scalar(args[0]!)._tag !== "Text") : error("#VALUE!");
+  }
+  return undefined;
 }
 export function evaluate(
   ast: Ast,
@@ -179,6 +435,8 @@ export function evaluate(
             new EvaluationFailure({ message: "Evaluation step limit exceeded" }),
           );
         switch (node._tag) {
+          case "Missing":
+            return blank;
           case "Literal":
             return node.value;
           case "Reference":
@@ -195,10 +453,11 @@ export function evaluate(
             return range(rows);
           }
           case "Unary": {
+            if (node.operator === "+") return yield* visit(node.value);
             const value = toNumber(scalar(yield* visit(node.value)));
             return isError(value)
               ? value
-              : number(node.operator === "-" ? -value.value : value.value);
+              : number(node.operator === "-" ? -value.value : value.value / 100);
           }
           case "Binary":
             return arithmetic(
@@ -208,14 +467,27 @@ export function evaluate(
             );
           case "Call": {
             const name = node.name;
+            if (name === "CHOOSE") {
+              if (node.args.length < 2) return error("#VALUE!");
+              const index = toNumber(scalar(yield* visit(node.args[0]!)));
+              if (isError(index)) return index;
+              const selected = Math.trunc(index.value);
+              if (selected < 1 || selected >= node.args.length) return error("#VALUE!");
+              return yield* visit(node.args[selected]!);
+            }
             if (name === "IF") {
-              if (node.args.length < 2 || node.args.length > 3) return error("#VALUE!");
+              if (node.args.length < 1 || node.args.length > 3) return error("#VALUE!");
               const condition = toBoolean(scalar(yield* visit(node.args[0]!)));
               if (isError(condition)) return condition;
+              if (node.args.length === 1) return condition;
               return condition.value
-                ? yield* visit(node.args[1]!)
+                ? node.args[1]?._tag === "Missing"
+                  ? number(0)
+                  : yield* visit(node.args[1]!)
                 : node.args[2]
-                  ? yield* visit(node.args[2])
+                  ? node.args[2]._tag === "Missing"
+                    ? number(0)
+                    : yield* visit(node.args[2])
                   : bool(false);
             }
             if (name === "IFERROR") {
@@ -241,8 +513,15 @@ export function evaluate(
             }
             const args: Value[] = [];
             for (const arg of node.args) args.push(yield* visit(arg));
-            if (["SUM", "AVERAGE", "MIN", "MAX", "COUNT"].includes(name))
+            if (
+              name === "COUNTBLANK" &&
+              (node.args.length !== 1 || !["Reference", "Range"].includes(node.args[0]?._tag ?? ""))
+            )
+              return error("#VALUE!");
+            if (["SUM", "AVERAGE", "MIN", "MAX", "COUNT", "COUNTA", "COUNTBLANK"].includes(name))
               return aggregate(name, args);
+            const built = builtIn(name, args);
+            if (built !== undefined) return built;
             const custom = registry.functions.get(name);
             return custom ? yield* custom(args) : error("#NAME?");
           }

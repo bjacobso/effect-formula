@@ -56,19 +56,19 @@
           }
         },
         {
-          "name": "right associative power",
+          "name": "left associative power",
           "formula": "=2^3^2",
           "expected": {
             "_tag": "Number",
-            "value": 512
+            "value": 64
           }
         },
         {
-          "name": "power before unary minus",
+          "name": "unary minus before power",
           "formula": "=-2^2",
           "expected": {
             "_tag": "Number",
-            "value": -4
+            "value": 4
           }
         }
       ]

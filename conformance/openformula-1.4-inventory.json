@@ -1,0 +1,1736 @@
+{
+  "standard": "OpenFormula 1.4",
+  "source": "https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html",
+  "conformanceSection": "2.3",
+  "groups": [
+    {
+      "name": "small",
+      "functions": [
+        {
+          "name": "ABS",
+          "section": "6.16.2"
+        },
+        {
+          "name": "ACOS",
+          "section": "6.16.3"
+        },
+        {
+          "name": "AND",
+          "section": "6.15.2"
+        },
+        {
+          "name": "ASIN",
+          "section": "6.16.7"
+        },
+        {
+          "name": "ATAN",
+          "section": "6.16.9"
+        },
+        {
+          "name": "ATAN2",
+          "section": "6.16.10"
+        },
+        {
+          "name": "AVERAGE",
+          "section": "6.18.3"
+        },
+        {
+          "name": "AVERAGEIF",
+          "section": "6.18.5"
+        },
+        {
+          "name": "CHOOSE",
+          "section": "6.14.3"
+        },
+        {
+          "name": "COLUMNS",
+          "section": "6.13.5"
+        },
+        {
+          "name": "COS",
+          "section": "6.16.19"
+        },
+        {
+          "name": "COUNT",
+          "section": "6.13.6"
+        },
+        {
+          "name": "COUNTA",
+          "section": "6.13.7"
+        },
+        {
+          "name": "COUNTBLANK",
+          "section": "6.13.8"
+        },
+        {
+          "name": "COUNTIF",
+          "section": "6.13.9"
+        },
+        {
+          "name": "DATE",
+          "section": "6.10.2"
+        },
+        {
+          "name": "DAVERAGE",
+          "section": "6.9.2"
+        },
+        {
+          "name": "DAY",
+          "section": "6.10.5"
+        },
+        {
+          "name": "DCOUNT",
+          "section": "6.9.3"
+        },
+        {
+          "name": "DCOUNTA",
+          "section": "6.9.4"
+        },
+        {
+          "name": "DDB",
+          "section": "6.12.14"
+        },
+        {
+          "name": "DEGREES",
+          "section": "6.16.25"
+        },
+        {
+          "name": "DGET",
+          "section": "6.9.5"
+        },
+        {
+          "name": "DMAX",
+          "section": "6.9.6"
+        },
+        {
+          "name": "DMIN",
+          "section": "6.9.7"
+        },
+        {
+          "name": "DPRODUCT",
+          "section": "6.9.8"
+        },
+        {
+          "name": "DSTDEV",
+          "section": "6.9.9"
+        },
+        {
+          "name": "DSTDEVP",
+          "section": "6.9.10"
+        },
+        {
+          "name": "DSUM",
+          "section": "6.9.11"
+        },
+        {
+          "name": "DVAR",
+          "section": "6.9.12"
+        },
+        {
+          "name": "DVARP",
+          "section": "6.9.13"
+        },
+        {
+          "name": "EVEN",
+          "section": "6.16.30"
+        },
+        {
+          "name": "EXACT",
+          "section": "6.20.8"
+        },
+        {
+          "name": "EXP",
+          "section": "6.16.31"
+        },
+        {
+          "name": "FACT",
+          "section": "6.16.32"
+        },
+        {
+          "name": "FALSE",
+          "section": "6.15.3"
+        },
+        {
+          "name": "FIND",
+          "section": "6.20.9"
+        },
+        {
+          "name": "FV",
+          "section": "6.12.20"
+        },
+        {
+          "name": "HLOOKUP",
+          "section": "6.14.5"
+        },
+        {
+          "name": "HOUR",
+          "section": "6.10.11"
+        },
+        {
+          "name": "IF",
+          "section": "6.15.4"
+        },
+        {
+          "name": "INDEX",
+          "section": "6.14.6"
+        },
+        {
+          "name": "INT",
+          "section": "6.17.2"
+        },
+        {
+          "name": "IRR",
+          "section": "6.12.24"
+        },
+        {
+          "name": "ISBLANK",
+          "section": "6.13.14"
+        },
+        {
+          "name": "ISERR",
+          "section": "6.13.15"
+        },
+        {
+          "name": "ISERROR",
+          "section": "6.13.16"
+        },
+        {
+          "name": "ISLOGICAL",
+          "section": "6.13.19"
+        },
+        {
+          "name": "ISNA",
+          "section": "6.13.20"
+        },
+        {
+          "name": "ISNONTEXT",
+          "section": "6.13.21"
+        },
+        {
+          "name": "ISNUMBER",
+          "section": "6.13.22"
+        },
+        {
+          "name": "ISTEXT",
+          "section": "6.13.25"
+        },
+        {
+          "name": "LEFT",
+          "section": "6.20.12"
+        },
+        {
+          "name": "LEN",
+          "section": "6.20.13"
+        },
+        {
+          "name": "LN",
+          "section": "6.16.39"
+        },
+        {
+          "name": "LOG",
+          "section": "6.16.40"
+        },
+        {
+          "name": "LOG10",
+          "section": "6.16.41"
+        },
+        {
+          "name": "LOWER",
+          "section": "6.20.14"
+        },
+        {
+          "name": "MATCH",
+          "section": "6.14.9"
+        },
+        {
+          "name": "MAX",
+          "section": "6.18.45"
+        },
+        {
+          "name": "MID",
+          "section": "6.20.15"
+        },
+        {
+          "name": "MIN",
+          "section": "6.18.48"
+        },
+        {
+          "name": "MINUTE",
+          "section": "6.10.13"
+        },
+        {
+          "name": "MOD",
+          "section": "6.16.42"
+        },
+        {
+          "name": "MONTH",
+          "section": "6.10.14"
+        },
+        {
+          "name": "N",
+          "section": "6.13.26"
+        },
+        {
+          "name": "NA",
+          "section": "6.13.27"
+        },
+        {
+          "name": "NOT",
+          "section": "6.15.7"
+        },
+        {
+          "name": "NOW",
+          "section": "6.10.16"
+        },
+        {
+          "name": "NPER",
+          "section": "6.12.29"
+        },
+        {
+          "name": "NPV",
+          "section": "6.12.30"
+        },
+        {
+          "name": "ODD",
+          "section": "6.16.44"
+        },
+        {
+          "name": "OR",
+          "section": "6.15.8"
+        },
+        {
+          "name": "PI",
+          "section": "6.16.45"
+        },
+        {
+          "name": "PMT",
+          "section": "6.12.36"
+        },
+        {
+          "name": "POWER",
+          "section": "6.16.46"
+        },
+        {
+          "name": "PRODUCT",
+          "section": "6.16.47"
+        },
+        {
+          "name": "PROPER",
+          "section": "6.20.16"
+        },
+        {
+          "name": "PV",
+          "section": "6.12.41"
+        },
+        {
+          "name": "RADIANS",
+          "section": "6.16.49"
+        },
+        {
+          "name": "RATE",
+          "section": "6.12.42"
+        },
+        {
+          "name": "REPLACE",
+          "section": "6.20.17"
+        },
+        {
+          "name": "REPT",
+          "section": "6.20.18"
+        },
+        {
+          "name": "RIGHT",
+          "section": "6.20.19"
+        },
+        {
+          "name": "ROUND",
+          "section": "6.17.5"
+        },
+        {
+          "name": "ROWS",
+          "section": "6.13.30"
+        },
+        {
+          "name": "SECOND",
+          "section": "6.10.17"
+        },
+        {
+          "name": "SIN",
+          "section": "6.16.55"
+        },
+        {
+          "name": "SLN",
+          "section": "6.12.45"
+        },
+        {
+          "name": "SQRT",
+          "section": "6.16.58"
+        },
+        {
+          "name": "STDEV",
+          "section": "6.18.72"
+        },
+        {
+          "name": "STDEVP",
+          "section": "6.18.74"
+        },
+        {
+          "name": "SUBSTITUTE",
+          "section": "6.20.21"
+        },
+        {
+          "name": "SUM",
+          "section": "6.16.61"
+        },
+        {
+          "name": "SUMIF",
+          "section": "6.16.62"
+        },
+        {
+          "name": "SYD",
+          "section": "6.12.46"
+        },
+        {
+          "name": "T",
+          "section": "6.20.22"
+        },
+        {
+          "name": "TAN",
+          "section": "6.16.69"
+        },
+        {
+          "name": "TIME",
+          "section": "6.10.18"
+        },
+        {
+          "name": "TODAY",
+          "section": "6.10.20"
+        },
+        {
+          "name": "TRIM",
+          "section": "6.20.24"
+        },
+        {
+          "name": "TRUE",
+          "section": "6.15.9"
+        },
+        {
+          "name": "TRUNC",
+          "section": "6.17.8"
+        },
+        {
+          "name": "UPPER",
+          "section": "6.20.27"
+        },
+        {
+          "name": "VALUE",
+          "section": "6.13.34"
+        },
+        {
+          "name": "VAR",
+          "section": "6.18.82"
+        },
+        {
+          "name": "VARP",
+          "section": "6.18.84"
+        },
+        {
+          "name": "VLOOKUP",
+          "section": "6.14.12"
+        },
+        {
+          "name": "WEEKDAY",
+          "section": "6.10.21"
+        },
+        {
+          "name": "YEAR",
+          "section": "6.10.24"
+        }
+      ],
+      "requirements": [
+        {
+          "id": "limits.basic",
+          "section": "3.7"
+        },
+        {
+          "id": "syntax.criteria",
+          "section": "4.11.11"
+        },
+        {
+          "id": "syntax.basic-expressions",
+          "section": "5.2"
+        },
+        {
+          "id": "syntax.numbers",
+          "section": "5.3"
+        },
+        {
+          "id": "syntax.strings",
+          "section": "5.4"
+        },
+        {
+          "id": "syntax.operators",
+          "section": "5.5"
+        },
+        {
+          "id": "syntax.functions",
+          "section": "5.6"
+        },
+        {
+          "id": "syntax.nonstandard-functions",
+          "section": "5.7"
+        },
+        {
+          "id": "syntax.references",
+          "section": "5.8"
+        },
+        {
+          "id": "syntax.named-expressions",
+          "section": "5.11"
+        },
+        {
+          "id": "syntax.errors",
+          "section": "5.12"
+        },
+        {
+          "id": "syntax.whitespace",
+          "section": "5.14"
+        },
+        {
+          "id": "conversion.number",
+          "section": "6.3.5"
+        },
+        {
+          "id": "conversion.logical",
+          "section": "6.3.12"
+        },
+        {
+          "id": "conversion.text",
+          "section": "6.3.14"
+        },
+        {
+          "id": "conversion.reference",
+          "section": "6.3.2"
+        },
+        {
+          "id": "conversion.error",
+          "section": "6.3.1"
+        },
+        {
+          "id": "operator.comparison",
+          "section": "6.4.9"
+        },
+        {
+          "id": "operator.concat",
+          "section": "6.4.10"
+        },
+        {
+          "id": "operator.add",
+          "section": "6.4.2"
+        },
+        {
+          "id": "operator.subtract",
+          "section": "6.4.3"
+        },
+        {
+          "id": "operator.multiply",
+          "section": "6.4.4"
+        },
+        {
+          "id": "operator.divide",
+          "section": "6.4.5"
+        },
+        {
+          "id": "operator.power",
+          "section": "6.4.6"
+        },
+        {
+          "id": "operator.equal",
+          "section": "6.4.7"
+        },
+        {
+          "id": "operator.not-equal",
+          "section": "6.4.8"
+        },
+        {
+          "id": "operator.percent",
+          "section": "6.4.14"
+        },
+        {
+          "id": "operator.unary-plus",
+          "section": "6.4.15"
+        },
+        {
+          "id": "operator.unary-minus",
+          "section": "6.4.16"
+        },
+        {
+          "id": "operator.intersection",
+          "section": "6.4.12"
+        },
+        {
+          "id": "operator.range",
+          "section": "6.4.11"
+        }
+      ]
+    },
+    {
+      "name": "medium",
+      "functions": [
+        {
+          "name": "ACCRINT",
+          "section": "6.12.2"
+        },
+        {
+          "name": "ACCRINTM",
+          "section": "6.12.3"
+        },
+        {
+          "name": "ACOSH",
+          "section": "6.16.4"
+        },
+        {
+          "name": "ACOT",
+          "section": "6.16.5"
+        },
+        {
+          "name": "ACOTH",
+          "section": "6.16.6"
+        },
+        {
+          "name": "ADDRESS",
+          "section": "6.14.2"
+        },
+        {
+          "name": "ASINH",
+          "section": "6.16.8"
+        },
+        {
+          "name": "ATANH",
+          "section": "6.16.11"
+        },
+        {
+          "name": "AVEDEV",
+          "section": "6.18.2"
+        },
+        {
+          "name": "BESSELI",
+          "section": "6.16.12"
+        },
+        {
+          "name": "BESSELJ",
+          "section": "6.16.13"
+        },
+        {
+          "name": "BESSELK",
+          "section": "6.16.14"
+        },
+        {
+          "name": "BESSELY",
+          "section": "6.16.15"
+        },
+        {
+          "name": "BETADIST",
+          "section": "6.18.7"
+        },
+        {
+          "name": "BETAINV",
+          "section": "6.18.8"
+        },
+        {
+          "name": "BINOMDIST",
+          "section": "6.18.10"
+        },
+        {
+          "name": "CEILING",
+          "section": "6.17.1"
+        },
+        {
+          "name": "CHAR",
+          "section": "6.20.3"
+        },
+        {
+          "name": "CLEAN",
+          "section": "6.20.4"
+        },
+        {
+          "name": "CODE",
+          "section": "6.20.5"
+        },
+        {
+          "name": "COLUMN",
+          "section": "6.13.4"
+        },
+        {
+          "name": "COMBIN",
+          "section": "6.16.16"
+        },
+        {
+          "name": "CONCATENATE",
+          "section": "6.20.6"
+        },
+        {
+          "name": "CONFIDENCE",
+          "section": "6.18.16"
+        },
+        {
+          "name": "CONVERT",
+          "section": "6.16.18"
+        },
+        {
+          "name": "CORREL",
+          "section": "6.18.17"
+        },
+        {
+          "name": "COSH",
+          "section": "6.16.20"
+        },
+        {
+          "name": "COT",
+          "section": "6.16.21"
+        },
+        {
+          "name": "COTH",
+          "section": "6.16.22"
+        },
+        {
+          "name": "COUPDAYBS",
+          "section": "6.12.5"
+        },
+        {
+          "name": "COUPDAYS",
+          "section": "6.12.6"
+        },
+        {
+          "name": "COUPDAYSNC",
+          "section": "6.12.7"
+        },
+        {
+          "name": "COUPNCD",
+          "section": "6.12.7"
+        },
+        {
+          "name": "COUPNUM",
+          "section": "6.12.9"
+        },
+        {
+          "name": "COUPPCD",
+          "section": "6.12.10"
+        },
+        {
+          "name": "COVAR",
+          "section": "6.18.18"
+        },
+        {
+          "name": "CRITBINOM",
+          "section": "6.18.19"
+        },
+        {
+          "name": "CUMIPMT",
+          "section": "6.12.11"
+        },
+        {
+          "name": "CUMPRINC",
+          "section": "6.12.12"
+        },
+        {
+          "name": "DATEVALUE",
+          "section": "6.10.4"
+        },
+        {
+          "name": "DAYS360",
+          "section": "6.10.7"
+        },
+        {
+          "name": "DB",
+          "section": "6.12.13"
+        },
+        {
+          "name": "DEVSQ",
+          "section": "6.18.20"
+        },
+        {
+          "name": "DISC",
+          "section": "6.12.15"
+        },
+        {
+          "name": "DOLLARDE",
+          "section": "6.12.16"
+        },
+        {
+          "name": "DOLLARFR",
+          "section": "6.12.17"
+        },
+        {
+          "name": "DURATION",
+          "section": "6.12.18"
+        },
+        {
+          "name": "EFFECT",
+          "section": "6.12.19"
+        },
+        {
+          "name": "EOMONTH",
+          "section": "6.10.10"
+        },
+        {
+          "name": "ERF",
+          "section": "6.16.27"
+        },
+        {
+          "name": "ERFC",
+          "section": "6.16.28"
+        },
+        {
+          "name": "EXPONDIST",
+          "section": "6.18.21"
+        },
+        {
+          "name": "FISHER",
+          "section": "6.18.26"
+        },
+        {
+          "name": "FISHERINV",
+          "section": "6.18.27"
+        },
+        {
+          "name": "FIXED",
+          "section": "6.20.10"
+        },
+        {
+          "name": "FLOOR",
+          "section": "6.17.3"
+        },
+        {
+          "name": "FORECAST",
+          "section": "6.18.28"
+        },
+        {
+          "name": "FTEST",
+          "section": "6.18.30"
+        },
+        {
+          "name": "GAMMADIST",
+          "section": "6.18.31"
+        },
+        {
+          "name": "GAMMAINV",
+          "section": "6.18.32"
+        },
+        {
+          "name": "GAMMALN",
+          "section": "6.16.35"
+        },
+        {
+          "name": "GCD",
+          "section": "6.16.36"
+        },
+        {
+          "name": "GEOMEAN",
+          "section": "6.18.34"
+        },
+        {
+          "name": "HARMEAN",
+          "section": "6.18.36"
+        },
+        {
+          "name": "HYPGEOMDIST",
+          "section": "6.18.37"
+        },
+        {
+          "name": "INTERCEPT",
+          "section": "6.18.38"
+        },
+        {
+          "name": "INTRATE",
+          "section": "6.12.22"
+        },
+        {
+          "name": "ISEVEN",
+          "section": "6.13.17"
+        },
+        {
+          "name": "ISODD",
+          "section": "6.13.23"
+        },
+        {
+          "name": "ISOWEEKNUM",
+          "section": "6.10.12"
+        },
+        {
+          "name": "KURT",
+          "section": "6.18.39"
+        },
+        {
+          "name": "LARGE",
+          "section": "6.18.40"
+        },
+        {
+          "name": "LCM",
+          "section": "6.16.38"
+        },
+        {
+          "name": "LEGACY.CHIDIST",
+          "section": "6.18.11"
+        },
+        {
+          "name": "LEGACY.CHIINV",
+          "section": "6.18.13"
+        },
+        {
+          "name": "LEGACY.CHITEST",
+          "section": "6.18.15"
+        },
+        {
+          "name": "LEGACY.FDIST",
+          "section": "6.18.23"
+        },
+        {
+          "name": "LEGACY.FINV",
+          "section": "6.18.25"
+        },
+        {
+          "name": "LEGACY.NORMSDIST",
+          "section": "6.18.54"
+        },
+        {
+          "name": "LEGACY.NORMSINV",
+          "section": "6.18.55"
+        },
+        {
+          "name": "LEGACY.TDIST",
+          "section": "6.18.77"
+        },
+        {
+          "name": "LINEST",
+          "section": "6.18.41"
+        },
+        {
+          "name": "LOGEST",
+          "section": "6.18.42"
+        },
+        {
+          "name": "LOGINV",
+          "section": "6.18.43"
+        },
+        {
+          "name": "LOGNORMDIST",
+          "section": "6.18.44"
+        },
+        {
+          "name": "LOOKUP",
+          "section": "6.14.8"
+        },
+        {
+          "name": "MDURATION",
+          "section": "6.12.26"
+        },
+        {
+          "name": "MEDIAN",
+          "section": "6.18.47"
+        },
+        {
+          "name": "MINVERSE",
+          "section": "6.5.3"
+        },
+        {
+          "name": "MIRR",
+          "section": "6.12.27"
+        },
+        {
+          "name": "MMULT",
+          "section": "6.5.4"
+        },
+        {
+          "name": "MODE",
+          "section": "6.18.50"
+        },
+        {
+          "name": "MROUND",
+          "section": "6.17.4"
+        },
+        {
+          "name": "MULTINOMIAL",
+          "section": "6.16.43"
+        },
+        {
+          "name": "NEGBINOMDIST",
+          "section": "6.18.51"
+        },
+        {
+          "name": "NETWORKDAYS",
+          "section": "6.10.15"
+        },
+        {
+          "name": "NOMINAL",
+          "section": "6.12.28"
+        },
+        {
+          "name": "ODDFPRICE",
+          "section": "6.12.31"
+        },
+        {
+          "name": "ODDFYIELD",
+          "section": "6.12.32"
+        },
+        {
+          "name": "ODDLPRICE",
+          "section": "6.12.33"
+        },
+        {
+          "name": "ODDLYIELD",
+          "section": "6.12.34"
+        },
+        {
+          "name": "OFFSET",
+          "section": "6.14.11"
+        },
+        {
+          "name": "PEARSON",
+          "section": "6.18.56"
+        },
+        {
+          "name": "PERCENTILE",
+          "section": "6.18.57"
+        },
+        {
+          "name": "PERCENTRANK",
+          "section": "6.18.58"
+        },
+        {
+          "name": "PERMUT",
+          "section": "6.18.59"
+        },
+        {
+          "name": "POISSON",
+          "section": "6.18.62"
+        },
+        {
+          "name": "PRICE",
+          "section": "6.12.38"
+        },
+        {
+          "name": "PRICEMAT",
+          "section": "6.12.40"
+        },
+        {
+          "name": "PROB",
+          "section": "6.18.63"
+        },
+        {
+          "name": "QUARTILE",
+          "section": "6.18.64"
+        },
+        {
+          "name": "QUOTIENT",
+          "section": "6.16.48"
+        },
+        {
+          "name": "RAND",
+          "section": "6.16.50"
+        },
+        {
+          "name": "RANDBETWEEN",
+          "section": "6.16.51"
+        },
+        {
+          "name": "RANK",
+          "section": "6.18.65"
+        },
+        {
+          "name": "RECEIVED",
+          "section": "6.12.43"
+        },
+        {
+          "name": "ROMAN",
+          "section": "6.19.17"
+        },
+        {
+          "name": "ROUNDDOWN",
+          "section": "6.17.6"
+        },
+        {
+          "name": "ROUNDUP",
+          "section": "6.17.7"
+        },
+        {
+          "name": "ROW",
+          "section": "6.13.29"
+        },
+        {
+          "name": "RSQ",
+          "section": "6.18.66"
+        },
+        {
+          "name": "SERIESSUM",
+          "section": "6.16.53"
+        },
+        {
+          "name": "SIGN",
+          "section": "6.16.54"
+        },
+        {
+          "name": "SINH",
+          "section": "6.16.56"
+        },
+        {
+          "name": "SKEW",
+          "section": "6.18.67"
+        },
+        {
+          "name": "SKEWP",
+          "section": "6.18.68"
+        },
+        {
+          "name": "SLOPE",
+          "section": "6.18.69"
+        },
+        {
+          "name": "SMALL",
+          "section": "6.18.70"
+        },
+        {
+          "name": "SQRTPI",
+          "section": "6.16.59"
+        },
+        {
+          "name": "STANDARDIZE",
+          "section": "6.18.71"
+        },
+        {
+          "name": "STDEVA",
+          "section": "6.18.73"
+        },
+        {
+          "name": "STDEVPA",
+          "section": "6.18.75"
+        },
+        {
+          "name": "STEYX",
+          "section": "6.18.76"
+        },
+        {
+          "name": "SUBTOTAL",
+          "section": "6.16.60"
+        },
+        {
+          "name": "SUMPRODUCT",
+          "section": "6.16.64"
+        },
+        {
+          "name": "SUMSQ",
+          "section": "6.16.65"
+        },
+        {
+          "name": "SUMX2MY2",
+          "section": "6.16.66"
+        },
+        {
+          "name": "SUMX2PY2",
+          "section": "6.16.67"
+        },
+        {
+          "name": "SUMXMY2",
+          "section": "6.16.68"
+        },
+        {
+          "name": "TANH",
+          "section": "6.16.70"
+        },
+        {
+          "name": "TBILLEQ",
+          "section": "6.12.47"
+        },
+        {
+          "name": "TBILLPRICE",
+          "section": "6.12.48"
+        },
+        {
+          "name": "TBILLYIELD",
+          "section": "6.12.49"
+        },
+        {
+          "name": "TIMEVALUE",
+          "section": "6.10.19"
+        },
+        {
+          "name": "TINV",
+          "section": "6.18.78"
+        },
+        {
+          "name": "TRANSPOSE",
+          "section": "6.5.6"
+        },
+        {
+          "name": "TREND",
+          "section": "6.18.79"
+        },
+        {
+          "name": "TRIMMEAN",
+          "section": "6.18.80"
+        },
+        {
+          "name": "TTEST",
+          "section": "6.18.81"
+        },
+        {
+          "name": "TYPE",
+          "section": "6.13.33"
+        },
+        {
+          "name": "VARA",
+          "section": "6.18.83"
+        },
+        {
+          "name": "VDB",
+          "section": "6.12.50"
+        },
+        {
+          "name": "WEEKNUM",
+          "section": "6.10.22"
+        },
+        {
+          "name": "WEIBULL",
+          "section": "6.18.86"
+        },
+        {
+          "name": "WORKDAY",
+          "section": "6.10.23"
+        },
+        {
+          "name": "XIRR",
+          "section": "6.12.51"
+        },
+        {
+          "name": "XNPV",
+          "section": "6.12.52"
+        },
+        {
+          "name": "YEARFRAC",
+          "section": "6.10.25"
+        },
+        {
+          "name": "YIELD",
+          "section": "6.12.53"
+        },
+        {
+          "name": "YIELDDISC",
+          "section": "6.12.54"
+        },
+        {
+          "name": "YIELDMAT",
+          "section": "6.12.55"
+        },
+        {
+          "name": "ZTEST",
+          "section": "6.18.87"
+        }
+      ],
+      "requirements": [
+        {
+          "id": "operator.union",
+          "section": "6.4.13"
+        },
+        {
+          "id": "references.multi-area",
+          "section": "5.9"
+        }
+      ]
+    },
+    {
+      "name": "large",
+      "functions": [
+        {
+          "name": "AMORLINC",
+          "section": "6.12.4"
+        },
+        {
+          "name": "ARABIC",
+          "section": "6.19.2"
+        },
+        {
+          "name": "AREAS",
+          "section": "6.13.2"
+        },
+        {
+          "name": "ASC",
+          "section": "6.20.2"
+        },
+        {
+          "name": "AVERAGEA",
+          "section": "6.18.4"
+        },
+        {
+          "name": "AVERAGEIFS",
+          "section": "6.18.6"
+        },
+        {
+          "name": "BASE",
+          "section": "6.19.3"
+        },
+        {
+          "name": "BIN2DEC",
+          "section": "6.19.4"
+        },
+        {
+          "name": "BIN2HEX",
+          "section": "6.19.5"
+        },
+        {
+          "name": "BIN2OCT",
+          "section": "6.19.6"
+        },
+        {
+          "name": "BINOM.DIST.RANGE",
+          "section": "6.18.9"
+        },
+        {
+          "name": "BITAND",
+          "section": "6.6.2"
+        },
+        {
+          "name": "BITLSHIFT",
+          "section": "6.6.3"
+        },
+        {
+          "name": "BITOR",
+          "section": "6.6.4"
+        },
+        {
+          "name": "BITRSHIFT",
+          "section": "6.6.5"
+        },
+        {
+          "name": "BITXOR",
+          "section": "6.6.6"
+        },
+        {
+          "name": "CHISQDIST",
+          "section": "6.18.12"
+        },
+        {
+          "name": "CHISQINV",
+          "section": "6.18.14"
+        },
+        {
+          "name": "COMBINA",
+          "section": "6.16.17"
+        },
+        {
+          "name": "COMPLEX",
+          "section": "6.8.2"
+        },
+        {
+          "name": "COUNTIFS",
+          "section": "6.13.10"
+        },
+        {
+          "name": "CSC",
+          "section": "6.16.23"
+        },
+        {
+          "name": "CSCH",
+          "section": "6.16.24"
+        },
+        {
+          "name": "DATEDIF",
+          "section": "6.10.3"
+        },
+        {
+          "name": "DAYS",
+          "section": "6.10.6"
+        },
+        {
+          "name": "DDE",
+          "section": "6.11.2"
+        },
+        {
+          "name": "DEC2BIN",
+          "section": "6.19.7"
+        },
+        {
+          "name": "DEC2HEX",
+          "section": "6.19.8"
+        },
+        {
+          "name": "DEC2OCT",
+          "section": "6.19.9"
+        },
+        {
+          "name": "DECIMAL",
+          "section": "6.19.10"
+        },
+        {
+          "name": "DELTA",
+          "section": "6.16.26"
+        },
+        {
+          "name": "EDATE",
+          "section": "6.10.9"
+        },
+        {
+          "name": "ERROR.TYPE",
+          "section": "6.13.11"
+        },
+        {
+          "name": "EUROCONVERT",
+          "section": "6.16.29"
+        },
+        {
+          "name": "FACTDOUBLE",
+          "section": "6.16.33"
+        },
+        {
+          "name": "FDIST",
+          "section": "6.18.22"
+        },
+        {
+          "name": "FINDB",
+          "section": "6.7.2"
+        },
+        {
+          "name": "FINV",
+          "section": "6.18.24"
+        },
+        {
+          "name": "FORMULA",
+          "section": "6.13.12"
+        },
+        {
+          "name": "FREQUENCY",
+          "section": "6.18.29"
+        },
+        {
+          "name": "FVSCHEDULE",
+          "section": "6.12.21"
+        },
+        {
+          "name": "GAMMA",
+          "section": "6.16.34"
+        },
+        {
+          "name": "GAUSS",
+          "section": "6.18.33"
+        },
+        {
+          "name": "GESTEP",
+          "section": "6.16.37"
+        },
+        {
+          "name": "GETPIVOTDATA",
+          "section": "6.14.4"
+        },
+        {
+          "name": "GROWTH",
+          "section": "6.18.35"
+        },
+        {
+          "name": "HEX2BIN",
+          "section": "6.19.11"
+        },
+        {
+          "name": "HEX2DEC",
+          "section": "6.19.12"
+        },
+        {
+          "name": "HEX2OCT",
+          "section": "6.19.13"
+        },
+        {
+          "name": "HYPERLINK",
+          "section": "6.11.3"
+        },
+        {
+          "name": "IFERROR",
+          "section": "6.15.5"
+        },
+        {
+          "name": "IFNA",
+          "section": "6.15.6"
+        },
+        {
+          "name": "IMABS",
+          "section": "6.8.3"
+        },
+        {
+          "name": "IMAGINARY",
+          "section": "6.8.4"
+        },
+        {
+          "name": "IMARGUMENT",
+          "section": "6.8.5"
+        },
+        {
+          "name": "IMCONJUGATE",
+          "section": "6.8.6"
+        },
+        {
+          "name": "IMCOS",
+          "section": "6.8.7"
+        },
+        {
+          "name": "IMCOT",
+          "section": "6.8.9"
+        },
+        {
+          "name": "IMCSC",
+          "section": "6.8.10"
+        },
+        {
+          "name": "IMCSCH",
+          "section": "6.8.11"
+        },
+        {
+          "name": "IMDIV",
+          "section": "6.8.12"
+        },
+        {
+          "name": "IMEXP",
+          "section": "6.8.13"
+        },
+        {
+          "name": "IMLN",
+          "section": "6.8.14"
+        },
+        {
+          "name": "IMLOG10",
+          "section": "6.8.15"
+        },
+        {
+          "name": "IMLOG2",
+          "section": "6.8.16"
+        },
+        {
+          "name": "IMPOWER",
+          "section": "6.8.17"
+        },
+        {
+          "name": "IMPRODUCT",
+          "section": "6.8.18"
+        },
+        {
+          "name": "IMREAL",
+          "section": "6.8.19"
+        },
+        {
+          "name": "IMSEC",
+          "section": "6.8.22"
+        },
+        {
+          "name": "IMSECH",
+          "section": "6.8.23"
+        },
+        {
+          "name": "IMSIN",
+          "section": "6.8.20"
+        },
+        {
+          "name": "IMSQRT",
+          "section": "6.8.24"
+        },
+        {
+          "name": "IMSUB",
+          "section": "6.8.25"
+        },
+        {
+          "name": "IMSUM",
+          "section": "6.8.26"
+        },
+        {
+          "name": "IMTAN",
+          "section": "6.8.27"
+        },
+        {
+          "name": "INDIRECT",
+          "section": "6.14.7"
+        },
+        {
+          "name": "INFO",
+          "section": "6.13.13"
+        },
+        {
+          "name": "IPMT",
+          "section": "6.12.23"
+        },
+        {
+          "name": "ISFORMULA",
+          "section": "6.13.18"
+        },
+        {
+          "name": "ISPMT",
+          "section": "6.12.25"
+        },
+        {
+          "name": "ISREF",
+          "section": "6.13.24"
+        },
+        {
+          "name": "JIS",
+          "section": "6.20.11"
+        },
+        {
+          "name": "LEFTB",
+          "section": "6.7.3"
+        },
+        {
+          "name": "LENB",
+          "section": "6.7.4"
+        },
+        {
+          "name": "MAXA",
+          "section": "6.18.46"
+        },
+        {
+          "name": "MDETERM",
+          "section": "6.5.2"
+        },
+        {
+          "name": "MULTIPLE.OPERATIONS",
+          "section": "6.14.10"
+        },
+        {
+          "name": "MUNIT",
+          "section": "6.5.5"
+        },
+        {
+          "name": "MIDB",
+          "section": "6.7.5"
+        },
+        {
+          "name": "MINA",
+          "section": "6.18.49"
+        },
+        {
+          "name": "NORMDIST",
+          "section": "6.18.52"
+        },
+        {
+          "name": "NORMINV",
+          "section": "6.18.53"
+        },
+        {
+          "name": "NUMBERVALUE",
+          "section": "6.13.28"
+        },
+        {
+          "name": "OCT2BIN",
+          "section": "6.19.14"
+        },
+        {
+          "name": "OCT2DEC",
+          "section": "6.19.15"
+        },
+        {
+          "name": "OCT2HEX",
+          "section": "6.19.16"
+        },
+        {
+          "name": "PDURATION",
+          "section": "6.12.35"
+        },
+        {
+          "name": "PERMUTATIONA",
+          "section": "6.18.60"
+        },
+        {
+          "name": "PHI",
+          "section": "6.18.61"
+        },
+        {
+          "name": "PPMT",
+          "section": "6.12.37"
+        },
+        {
+          "name": "PRICEDISC",
+          "section": "6.12.39"
+        },
+        {
+          "name": "REPLACEB",
+          "section": "6.7.6"
+        },
+        {
+          "name": "RIGHTB",
+          "section": "6.7.7"
+        },
+        {
+          "name": "RRI",
+          "section": "6.12.44"
+        },
+        {
+          "name": "SEARCH",
+          "section": "6.20.20"
+        },
+        {
+          "name": "SEARCHB",
+          "section": "6.7.8"
+        },
+        {
+          "name": "SEC",
+          "section": "6.16.52"
+        },
+        {
+          "name": "SECH",
+          "section": "6.16.57"
+        },
+        {
+          "name": "SHEET",
+          "section": "6.13.31"
+        },
+        {
+          "name": "SHEETS",
+          "section": "6.13.32"
+        },
+        {
+          "name": "SUMIFS",
+          "section": "6.16.63"
+        },
+        {
+          "name": "TEXT",
+          "section": "6.20.23"
+        },
+        {
+          "name": "UNICHAR",
+          "section": "6.20.25"
+        },
+        {
+          "name": "UNICODE",
+          "section": "6.20.26"
+        },
+        {
+          "name": "VARPA",
+          "section": "6.18.85"
+        },
+        {
+          "name": "XOR",
+          "section": "6.15.10"
+        }
+      ],
+      "requirements": [
+        {
+          "id": "syntax.inline-arrays",
+          "section": "5.13"
+        },
+        {
+          "id": "syntax.automatic-intersection",
+          "section": "5.10.6"
+        },
+        {
+          "id": "syntax.external-names",
+          "section": "5.11"
+        },
+        {
+          "id": "types.complex",
+          "section": "4.4"
+        },
+        {
+          "id": "evaluation.array-formulas",
+          "section": "3.3"
+        },
+        {
+          "id": "syntax.sheet-local-names",
+          "section": "5.11"
+        }
+      ]
+    }
+  ]
+}
