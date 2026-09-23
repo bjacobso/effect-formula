@@ -1,4 +1,4 @@
-import { Effect, Layer, Schema } from "effect";
+import { Effect, Layer, Option, Ref, Schema } from "effect";
 import {
   type EvalOptions,
   EvaluationFailure,
@@ -31,12 +31,19 @@ export interface FormulaSession {
   readonly snapshot: () => Effect.Effect<ReadonlyMap<string, Value>>;
 }
 export interface SessionOptions extends ParseOptions, EvalOptions {}
+interface SessionState {
+  readonly inputs: ReadonlyMap<string, Value>;
+  readonly formulas: ReadonlyMap<string, Ast>;
+  readonly results: ReadonlyMap<string, Value>;
+  readonly revision: number;
+}
 function dependencyKeys(ast: Ast, limit: number): ReadonlySet<string> {
   const keys = new Set<string>(references(ast));
+  const emptyKeys: readonly (readonly string[])[] = [];
   const visit = (node: Ast): void => {
     switch (node._tag) {
       case "Range":
-        for (const row of rangeKeys(node.start, node.end, limit) ?? [])
+        for (const row of Option.getOrElse(rangeKeys(node.start, node.end, limit), () => emptyKeys))
           for (const key of row) keys.add(key);
         break;
       case "Unary":
@@ -48,7 +55,10 @@ function dependencyKeys(ast: Ast, limit: number): ReadonlySet<string> {
         break;
       case "Call":
         if ((node.name === "SUMIF" || node.name === "AVERAGEIF") && node.args[0] && node.args[2])
-          for (const row of offsetReferenceKeys(node.args[0], node.args[2], limit) ?? [])
+          for (const row of Option.getOrElse(
+            offsetReferenceKeys(node.args[0], node.args[2], limit),
+            () => emptyKeys,
+          ))
             for (const key of row) keys.add(key);
         node.args.forEach(visit);
         break;
@@ -89,27 +99,31 @@ export const createSession = (
     const external = yield* ReferenceResolver;
     const functions = yield* FunctionRegistry;
     const semaphore = yield* Effect.makeSemaphore(1);
-    let inputs = new Map<string, Value>();
-    let formulas = new Map<string, Ast>();
-    let results = new Map<string, Value>();
-    let revision = 0;
+    const state = yield* Ref.make<SessionState>({
+      inputs: new Map(),
+      formulas: new Map(),
+      results: new Map(),
+      revision: 0,
+    });
     const get = (key: string) =>
       semaphore.withPermits(1)(
-        Effect.suspend(() =>
-          inputs.has(key)
-            ? Effect.succeed(inputs.get(key)!)
-            : results.has(key)
-              ? Effect.succeed(results.get(key)!)
+        Effect.flatMap(Ref.get(state), (current) =>
+          current.inputs.has(key)
+            ? Effect.succeed(current.inputs.get(key)!)
+            : current.results.has(key)
+              ? Effect.succeed(current.results.get(key)!)
               : external.get(key),
         ),
       );
-    const snapshot = () => semaphore.withPermits(1)(Effect.sync(() => new Map(results)));
+    const snapshot = () =>
+      semaphore.withPermits(1)(Effect.map(Ref.get(state), (current) => new Map(current.results)));
     const update = (updates: readonly Update[]) =>
       semaphore.withPermits(1)(
         Effect.gen(function* () {
-          const nextInputs = new Map(inputs);
-          const nextFormulas = new Map(formulas);
-          const nextResults = new Map(results);
+          const current = yield* Ref.get(state);
+          const nextInputs = new Map(current.inputs);
+          const nextFormulas = new Map(current.formulas);
+          const nextResults = new Map(current.results);
           const touched = new Set<string>();
           for (const entry of updates) {
             if (
@@ -189,15 +203,22 @@ export const createSession = (
           const changed = new Map<string, Value>();
           for (const key of touched) {
             const value = nextInputs.get(key) ?? nextResults.get(key) ?? error("#REF!");
-            if (JSON.stringify(value) !== JSON.stringify(inputs.get(key) ?? results.get(key)))
+            if (
+              JSON.stringify(value) !==
+              JSON.stringify(current.inputs.get(key) ?? current.results.get(key))
+            )
               changed.set(key, value);
           }
           for (const [key, value] of computed)
-            if (JSON.stringify(value) !== JSON.stringify(results.get(key))) changed.set(key, value);
-          inputs = nextInputs;
-          formulas = nextFormulas;
-          results = nextResults;
-          revision++;
+            if (JSON.stringify(value) !== JSON.stringify(current.results.get(key)))
+              changed.set(key, value);
+          const revision = current.revision + 1;
+          yield* Ref.set(state, {
+            inputs: nextInputs,
+            formulas: nextFormulas,
+            results: nextResults,
+            revision,
+          });
           return { revision, changed };
         }),
       );

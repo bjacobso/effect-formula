@@ -1,35 +1,45 @@
+import { Option } from "effect";
 import type { Scalar, Value } from "./Value.js";
 import { bool, error, isError, number, range, scalar, toBoolean, toNumber } from "./Value.js";
 
 function table(value: Value): readonly (readonly Scalar[])[] {
   return value._tag === "Range" ? value.rows : [[value]];
 }
-function compare(left: Scalar, right: Scalar): number | undefined {
-  if (isError(left) || isError(right)) return undefined;
+function compare(left: Scalar, right: Scalar): Option.Option<number> {
+  if (isError(left) || isError(right)) return Option.none();
   const rank = (value: Scalar) =>
     value._tag === "Number" ? 0 : value._tag === "Text" ? 1 : value._tag === "Boolean" ? 2 : 3;
-  if (rank(left) !== rank(right)) return rank(left) - rank(right);
-  if (left._tag === "Blank" && right._tag === "Blank") return 0;
-  if (left._tag === "Number" && right._tag === "Number") return left.value - right.value;
+  if (rank(left) !== rank(right)) return Option.some(rank(left) - rank(right));
+  if (left._tag === "Blank" && right._tag === "Blank") return Option.some(0);
+  if (left._tag === "Number" && right._tag === "Number")
+    return Option.some(left.value - right.value);
   if (left._tag === "Text" && right._tag === "Text")
-    return left.value.toLowerCase().localeCompare(right.value.toLowerCase());
+    return Option.some(left.value.toLowerCase().localeCompare(right.value.toLowerCase()));
   if (left._tag === "Boolean" && right._tag === "Boolean")
-    return Number(left.value) - Number(right.value);
-  return undefined;
+    return Option.some(Number(left.value) - Number(right.value));
+  return Option.none();
 }
 function matchIndex(lookup: Scalar, values: readonly Scalar[], mode: number): number {
-  if (mode === 0) return values.findIndex((value) => compare(value, lookup) === 0);
+  if (mode === 0)
+    return values.findIndex((value) => {
+      const comparison = compare(value, lookup);
+      return Option.isSome(comparison) && comparison.value === 0;
+    });
   let found = -1;
   for (let i = 0; i < values.length; i++) {
     const comparison = compare(values[i]!, lookup);
-    if (comparison === undefined) continue;
-    if (mode === 1 ? comparison <= 0 : comparison >= 0) found = i;
+    if (Option.isNone(comparison)) continue;
+    if (mode === 1 ? comparison.value <= 0 : comparison.value >= 0) found = i;
   }
   if (found >= 0 && values[found]!._tag !== lookup._tag) return -1;
   return found;
 }
 
-export function smallLookup(name: string, args: readonly Value[]): Value | undefined {
+const names = new Set(["INDEX", "MATCH", "HLOOKUP", "VLOOKUP"]);
+export function smallLookup(name: string, args: readonly Value[]): Option.Option<Value> {
+  return names.has(name) ? Option.some(evaluateLookup(name, args)) : Option.none();
+}
+function evaluateLookup(name: string, args: readonly Value[]): Value {
   if (name === "INDEX") {
     if (args.length < 1 || args.length > 4) return error("#VALUE!");
     const rows = table(args[0]!);
@@ -74,5 +84,5 @@ export function smallLookup(name: string, args: readonly Value[]): Value | undef
     if (position < 0) return error("#N/A");
     return name === "HLOOKUP" ? rows[ordinal - 1]![position]! : rows[position]![ordinal - 1]!;
   }
-  return undefined;
+  return error("#NAME?");
 }

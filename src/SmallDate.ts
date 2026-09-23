@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import type { Scalar, Value } from "./Value.js";
 import { error, isError, number, scalar, toNumber } from "./Value.js";
 
@@ -12,11 +13,11 @@ export interface DateOptions {
 function epoch(options: DateOptions): number {
   return options.dateEpoch ? Date.parse(`${options.dateEpoch}T00:00:00Z`) : defaultEpoch;
 }
-function dateSerial(value: Scalar, origin: number): number | undefined {
-  if (value._tag === "Number") return value.value;
-  if (value._tag !== "Text") return undefined;
+function dateSerial(value: Scalar, origin: number): Option.Option<number> {
+  if (value._tag === "Number") return Option.some(value.value);
+  if (value._tag !== "Text") return Option.none();
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(value.value);
-  if (!match) return undefined;
+  if (!match) return Option.none();
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
@@ -34,43 +35,43 @@ function dateSerial(value: Scalar, origin: number): number | undefined {
     check.getUTCMonth() + 1 !== month ||
     check.getUTCDate() !== day
   )
-    return undefined;
-  return (stamp - origin) / dayMilliseconds;
+    return Option.none();
+  return Option.some((stamp - origin) / dayMilliseconds);
 }
-function timeSerial(value: Scalar): number | undefined {
-  if (value._tag === "Number") return value.value;
-  if (value._tag !== "Text") return undefined;
+function timeSerial(value: Scalar): Option.Option<number> {
+  if (value._tag === "Number") return Option.some(value.value);
+  if (value._tag !== "Text") return Option.none();
   const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value.value);
-  if (!match) return undefined;
+  if (!match) return Option.none();
   const hour = Number(match[1]);
   const minute = Number(match[2]);
   const second = Number(match[3] ?? 0);
   return hour < 24 && minute < 60 && second < 60
-    ? (hour * 3600 + minute * 60 + second) / 86400
-    : undefined;
+    ? Option.some((hour * 3600 + minute * 60 + second) / 86400)
+    : Option.none();
 }
 
+const names = new Set([
+  "DATE",
+  "DAY",
+  "HOUR",
+  "MINUTE",
+  "MONTH",
+  "NOW",
+  "SECOND",
+  "TIME",
+  "TODAY",
+  "WEEKDAY",
+  "YEAR",
+]);
 export function smallDate(
   name: string,
   args: readonly Value[],
   options: DateOptions,
-): Scalar | undefined {
-  if (
-    ![
-      "DATE",
-      "DAY",
-      "HOUR",
-      "MINUTE",
-      "MONTH",
-      "NOW",
-      "SECOND",
-      "TIME",
-      "TODAY",
-      "WEEKDAY",
-      "YEAR",
-    ].includes(name)
-  )
-    return undefined;
+): Option.Option<Scalar> {
+  return names.has(name) ? Option.some(evaluateDate(name, args, options)) : Option.none();
+}
+function evaluateDate(name: string, args: readonly Value[], options: DateOptions): Scalar {
   const origin = epoch(options);
   if (!Number.isFinite(origin)) return error("#VALUE!");
   if (name === "NOW" || name === "TODAY") {
@@ -92,14 +93,17 @@ export function smallDate(
   if (args.length < 1 || args.length > (name === "WEEKDAY" ? 2 : 1)) return error("#VALUE!");
   const value = scalar(args[0]!);
   if (isError(value)) return value;
-  const serial = ["HOUR", "MINUTE", "SECOND"].includes(name)
-    ? (timeSerial(value) ?? dateSerial(value, origin))
-    : dateSerial(value, origin);
-  if (serial === undefined) return error("#VALUE!");
-  if (name === "HOUR") return number(Math.floor((((serial % 1) + 1) % 1) * 24));
-  if (name === "MINUTE") return number(Math.floor(((((serial % 1) + 1) % 1) * 1440) % 60));
-  if (name === "SECOND") return number(((Math.round(serial * 86400) % 60) + 60) % 60);
-  const date = new Date(origin + Math.floor(serial) * dayMilliseconds);
+  const time = timeSerial(value);
+  const serial =
+    ["HOUR", "MINUTE", "SECOND"].includes(name) && Option.isSome(time)
+      ? time
+      : dateSerial(value, origin);
+  if (Option.isNone(serial)) return error("#VALUE!");
+  const day = serial.value;
+  if (name === "HOUR") return number(Math.floor((((day % 1) + 1) % 1) * 24));
+  if (name === "MINUTE") return number(Math.floor(((((day % 1) + 1) % 1) * 1440) % 60));
+  if (name === "SECOND") return number(((Math.round(day * 86400) % 60) + 60) % 60);
+  const date = new Date(origin + Math.floor(day) * dayMilliseconds);
   if (name === "YEAR") return number(date.getUTCFullYear());
   if (name === "MONTH") return number(date.getUTCMonth() + 1);
   if (name === "DAY") return number(date.getUTCDate());

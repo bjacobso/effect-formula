@@ -1,4 +1,4 @@
-import { Context, Data, Effect, Layer } from "effect";
+import { Context, Data, Effect, Layer, Option, pipe } from "effect";
 import { matchesCriterion } from "./Criterion.js";
 import type { Ast } from "./Parser.js";
 import { smallDatabase } from "./SmallDatabase.js";
@@ -68,13 +68,15 @@ export interface EvalOptions extends DateOptions {
   readonly maxSteps?: number;
   readonly maxRangeCells?: number;
 }
-function cell(key: string): { col: number; row: number } | undefined {
+function cell(key: string): Option.Option<{ col: number; row: number }> {
   const match = /^cell:([A-Z]+)([1-9][0-9]*)$/.exec(key);
-  if (!match) return undefined;
+  if (!match) return Option.none();
   let col = 0;
   for (const letter of match[1]!) col = col * 26 + letter.charCodeAt(0) - 64;
   const row = Number(match[2]);
-  return Number.isSafeInteger(col) && Number.isSafeInteger(row) ? { col, row } : undefined;
+  return Number.isSafeInteger(col) && Number.isSafeInteger(row)
+    ? Option.some({ col, row })
+    : Option.none();
 }
 function keyOf(col: number, row: number): string {
   let name = "";
@@ -86,48 +88,63 @@ export function rangeKeys(
   start: string,
   end: string,
   max = 10000,
-): readonly (readonly string[])[] | undefined {
+): Option.Option<readonly (readonly string[])[]> {
   const a = cell(start);
   const b = cell(end);
-  if (!a || !b) return undefined;
-  const width = Math.abs(b.col - a.col) + 1;
-  const height = Math.abs(b.row - a.row) + 1;
-  if (!Number.isSafeInteger(width * height) || width * height > max) return undefined;
+  if (Option.isNone(a) || Option.isNone(b)) return Option.none();
+  const width = Math.abs(b.value.col - a.value.col) + 1;
+  const height = Math.abs(b.value.row - a.value.row) + 1;
+  if (!Number.isSafeInteger(width * height) || width * height > max) return Option.none();
   const rows: string[][] = [];
-  for (let row = Math.min(a.row, b.row); row <= Math.max(a.row, b.row); row++) {
+  for (
+    let row = Math.min(a.value.row, b.value.row);
+    row <= Math.max(a.value.row, b.value.row);
+    row++
+  ) {
     const keys: string[] = [];
-    for (let col = Math.min(a.col, b.col); col <= Math.max(a.col, b.col); col++)
+    for (
+      let col = Math.min(a.value.col, b.value.col);
+      col <= Math.max(a.value.col, b.value.col);
+      col++
+    )
       keys.push(keyOf(col, row));
     rows.push(keys);
   }
-  return rows;
+  return Option.some(rows);
 }
-export function referenceKeys(node: Ast, max = 10000): readonly (readonly string[])[] | undefined {
-  if (node._tag === "Reference") return cell(node.key) ? [[node.key]] : undefined;
-  return node._tag === "Range" ? rangeKeys(node.start, node.end, max) : undefined;
+export function referenceKeys(
+  node: Ast,
+  max = 10000,
+): Option.Option<readonly (readonly string[])[]> {
+  if (node._tag === "Reference")
+    return Option.isSome(cell(node.key)) ? Option.some([[node.key]]) : Option.none();
+  return node._tag === "Range" ? rangeKeys(node.start, node.end, max) : Option.none();
 }
 /** Expand a result reference from its top-left cell to the criteria range geometry. */
 export function offsetReferenceKeys(
   source: Ast,
   result: Ast,
   max = 10000,
-): readonly (readonly string[])[] | undefined {
+): Option.Option<readonly (readonly string[])[]> {
   const shape = referenceKeys(source, max);
   const topLeft =
     result._tag === "Reference"
       ? cell(result.key)
       : result._tag === "Range"
         ? cell(result.start)
-        : undefined;
-  if (!shape || !topLeft) return undefined;
+        : Option.none();
+  if (Option.isNone(shape) || Option.isNone(topLeft)) return Option.none();
+  const position = { ...topLeft.value };
   if (result._tag === "Range") {
     const end = cell(result.end);
-    if (!end) return undefined;
-    topLeft.col = Math.min(topLeft.col, end.col);
-    topLeft.row = Math.min(topLeft.row, end.row);
+    if (Option.isNone(end)) return Option.none();
+    position.col = Math.min(position.col, end.value.col);
+    position.row = Math.min(position.row, end.value.row);
   }
-  return shape.map((row, rowIndex) =>
-    row.map((_, colIndex) => keyOf(topLeft.col + colIndex, topLeft.row + rowIndex)),
+  return Option.some(
+    shape.value.map((row, rowIndex) =>
+      row.map((_, colIndex) => keyOf(position.col + colIndex, position.row + rowIndex)),
+    ),
   );
 }
 function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
@@ -231,7 +248,15 @@ function aggregate(name: string, args: readonly Value[]): Scalar {
       return number(numbers.length ? Math.max(...numbers) : 0);
   }
 }
-function builtIn(name: string, args: readonly Value[]): Scalar | undefined {
+const builtInNames = new Set(
+  "TRUE FALSE PI NA ABS ACOS ASIN ATAN COS SIN TAN EXP LN LOG10 DEGREES RADIANS EVEN ODD FACT SQRT INT POWER ATAN2 MOD ROUND LOG TRUNC LEN LOWER UPPER TRIM LEFT RIGHT MID EXACT FIND REPT N T VALUE ROWS COLUMNS ISBLANK ISERROR ISERR ISNA ISNUMBER ISTEXT ISLOGICAL ISNONTEXT".split(
+    " ",
+  ),
+);
+function builtIn(name: string, args: readonly Value[]): Option.Option<Scalar> {
+  return builtInNames.has(name) ? Option.some(evaluateBuiltIn(name, args)) : Option.none();
+}
+function evaluateBuiltIn(name: string, args: readonly Value[]): Scalar {
   const unary = (fn: (value: number) => number): Scalar => {
     if (args.length !== 1) return error("#VALUE!");
     const value = toNumber(scalar(args[0]!));
@@ -463,7 +488,7 @@ function builtIn(name: string, args: readonly Value[]): Scalar | undefined {
     case "ISNONTEXT":
       return args.length === 1 ? bool(scalar(args[0]!)._tag !== "Text") : error("#VALUE!");
   }
-  return undefined;
+  return error("#NAME?");
 }
 export function evaluate(
   ast: Ast,
@@ -492,9 +517,9 @@ export function evaluate(
             return yield* resolver.get(node.key);
           case "Range": {
             const keys = rangeKeys(node.start, node.end, options.maxRangeCells ?? 10000);
-            if (!keys) return error("#REF!");
+            if (Option.isNone(keys)) return error("#REF!");
             const rows: Scalar[][] = [];
-            for (const row of keys) {
+            for (const row of keys.value) {
               const values: Scalar[] = [];
               for (const key of row) values.push(scalar(yield* resolver.get(key)));
               rows.push(values);
@@ -512,9 +537,9 @@ export function evaluate(
             if (node.operator === "!") {
               const left = referenceKeys(node.left, options.maxRangeCells ?? 10000);
               const right = referenceKeys(node.right, options.maxRangeCells ?? 10000);
-              if (!left || !right) return error("#VALUE!");
-              const rightKeys = new Set(right.flat());
-              const common = left
+              if (Option.isNone(left) || Option.isNone(right)) return error("#VALUE!");
+              const rightKeys = new Set(right.value.flat());
+              const common = left.value
                 .map((row) => row.filter((key) => rightKeys.has(key)))
                 .filter((row) => row.length);
               if (!common.length) return error("#NULL!");
@@ -534,11 +559,11 @@ export function evaluate(
           case "Call": {
             const name = node.name;
             if (registry.disabled?.has(name)) return error("#NAME?");
-            const custom = registry.functions.get(name);
-            if (custom) {
+            const custom = Option.fromNullable(registry.functions.get(name));
+            if (Option.isSome(custom)) {
               const args: Value[] = [];
               for (const arg of node.args) args.push(yield* visit(arg));
-              return yield* custom(args);
+              return yield* custom.value(args);
             }
             if (name === "COUNTIF" || name === "SUMIF" || name === "AVERAGEIF") {
               if (node.args.length < 2 || node.args.length > (name === "COUNTIF" ? 2 : 3))
@@ -546,23 +571,23 @@ export function evaluate(
               const source = node.args[0]!;
               if (source._tag !== "Reference" && source._tag !== "Range") return error("#VALUE!");
               const sourceKeys = referenceKeys(source, options.maxRangeCells ?? 10000);
-              if (!sourceKeys?.[0]?.length) return error("#REF!");
+              if (Option.isNone(sourceKeys) || !sourceKeys.value[0]?.length) return error("#REF!");
               const criterion = scalar(yield* visit(node.args[1]!));
               if (isError(criterion)) return criterion;
-              let resultKeys: readonly (readonly string[])[] = sourceKeys;
+              let resultKeys: readonly (readonly string[])[] = sourceKeys.value;
               if (node.args[2]) {
                 const result = node.args[2];
                 if (result._tag !== "Reference" && result._tag !== "Range") return error("#VALUE!");
                 const offset = offsetReferenceKeys(source, result, options.maxRangeCells ?? 10000);
-                if (!offset) return error("#REF!");
-                resultKeys = offset;
+                if (Option.isNone(offset)) return error("#REF!");
+                resultKeys = offset.value;
               }
               let matched = 0;
               let sum = 0;
               let numbers = 0;
-              for (let row = 0; row < sourceKeys.length; row++)
-                for (let col = 0; col < sourceKeys[row]!.length; col++) {
-                  const candidate = scalar(yield* resolver.get(sourceKeys[row]![col]!));
+              for (let row = 0; row < sourceKeys.value.length; row++)
+                for (let col = 0; col < sourceKeys.value[row]!.length; col++) {
+                  const candidate = scalar(yield* resolver.get(sourceKeys.value[row]![col]!));
                   if (!matchesCriterion(candidate, criterion)) continue;
                   matched++;
                   if (name === "COUNTIF") continue;
@@ -630,19 +655,17 @@ export function evaluate(
               return error("#VALUE!");
             if (["SUM", "AVERAGE", "MIN", "MAX", "COUNT", "COUNTA", "COUNTBLANK"].includes(name))
               return aggregate(name, args);
-            const built = builtIn(name, args);
-            if (built !== undefined) return built;
-            const extra = smallExtra(name, args);
-            if (extra !== undefined) return extra;
-            const dated = smallDate(name, args, options);
-            if (dated !== undefined) return dated;
-            const financed = smallFinance(name, args);
-            if (financed !== undefined) return financed;
-            const lookedUp = smallLookup(name, args);
-            if (lookedUp !== undefined) return lookedUp;
-            const database = smallDatabase(name, args);
-            if (database !== undefined) return database;
-            return error("#NAME?");
+            return Option.getOrElse(
+              pipe(
+                builtIn(name, args),
+                Option.orElse(() => smallExtra(name, args)),
+                Option.orElse(() => smallDate(name, args, options)),
+                Option.orElse(() => smallFinance(name, args)),
+                Option.orElse(() => smallLookup(name, args)),
+                Option.orElse(() => smallDatabase(name, args)),
+              ),
+              () => error("#NAME?"),
+            );
           }
         }
       });

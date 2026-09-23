@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import type { Scalar, Value } from "./Value.js";
 import { entries, error, isError, number, scalar, toNumber } from "./Value.js";
 
@@ -48,7 +49,11 @@ function sequence(args: readonly Value[]): number[] | Scalar {
   return values;
 }
 
-export function smallFinance(name: string, args: readonly Value[]): Scalar | undefined {
+const names = new Set(["NPV", "IRR", "SLN", "SYD", "DDB", "FV", "NPER", "PMT", "PV", "RATE"]);
+export function smallFinance(name: string, args: readonly Value[]): Option.Option<Scalar> {
+  return names.has(name) ? Option.some(evaluateFinance(name, args)) : Option.none();
+}
+function evaluateFinance(name: string, args: readonly Value[]): Scalar {
   if (name === "NPV") {
     if (args.length < 2) return error("#VALUE!");
     const rate = toNumber(scalar(args[0]!));
@@ -84,7 +89,7 @@ export function smallFinance(name: string, args: readonly Value[]): Scalar | und
       life! <= 0 ||
       salvage! < 0 ||
       salvage! > cost! ||
-      (period !== undefined && (period < 1 || period > life!))
+      (values.length >= 4 && (period! < 1 || period! > life!))
     )
       return error("#NUM!");
     if (name === "SLN") return number((cost! - salvage!) / life!);
@@ -124,5 +129,5 @@ export function smallFinance(name: string, args: readonly Value[]): Scalar | und
     if (b! <= 0) return error("#NUM!");
     return number(-(c! * compound + fourth) / ((1 + a! * type) * annuity));
   }
-  return undefined;
+  return error("#NAME?");
 }

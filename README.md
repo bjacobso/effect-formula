@@ -36,6 +36,8 @@ console.log(await Effect.runPromise(session.get("field:total")))
 
 For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
 
+Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains cell keys, while `None` means the address is invalid or exceeds the configured range limit. Formula evaluation still returns tagged formula values, including errors; operational failures stay in Effect's error channel. Optional configuration fields remain ordinary TypeScript optional inputs.
+
 ### Function profiles
 
 Use `configureFunctions` to add Effect functions, override a built-in, or remove a function from a host's formula language. Names are case-insensitive. The profile is fixed when an evaluation or session receives its Effect layer.

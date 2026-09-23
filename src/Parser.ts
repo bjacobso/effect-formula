@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Data, Effect, Option } from "effect";
 import type { Scalar } from "./Value.js";
 import { bool, error, number, text } from "./Value.js";
 
@@ -172,8 +172,9 @@ class Reader {
         left = { _tag: "Range", start: left.key, end: right.key };
         continue;
       }
-      const p = precedence[op];
-      if (p === undefined || p < min) break;
+      const precedenceOption = Option.fromNullable(precedence[op]);
+      if (Option.isNone(precedenceOption) || precedenceOption.value < min) break;
+      const p = precedenceOption.value;
       this.index++;
       const right = this.expression(op === "^" && this.dialect === "excel" ? p : p + 1);
       left = { _tag: "Binary", operator: op, left, right };

@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import type { Scalar, Value } from "./Value.js";
 import { entries, error, isError, number, scalar, text, toNumber, toText } from "./Value.js";
 
@@ -16,7 +17,20 @@ function numericArguments(args: readonly Value[]): number[] | Scalar {
   return values;
 }
 
-export function smallExtra(name: string, args: readonly Value[]): Scalar | undefined {
+const names = new Set([
+  "PRODUCT",
+  "STDEV",
+  "STDEVP",
+  "VAR",
+  "VARP",
+  "PROPER",
+  "REPLACE",
+  "SUBSTITUTE",
+]);
+export function smallExtra(name: string, args: readonly Value[]): Option.Option<Scalar> {
+  return names.has(name) ? Option.some(evaluateExtra(name, args)) : Option.none();
+}
+function evaluateExtra(name: string, args: readonly Value[]): Scalar {
   if (["PRODUCT", "STDEV", "STDEVP", "VAR", "VARP"].includes(name)) {
     const values = numericArguments(args);
     if (!Array.isArray(values)) return values as Scalar;
@@ -77,5 +91,5 @@ export function smallExtra(name: string, args: readonly Value[]): Scalar | undef
       ),
     );
   }
-  return undefined;
+  return error("#NAME?");
 }

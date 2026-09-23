@@ -143,15 +143,22 @@ describe("session", () => {
     const session = await Effect.runPromise(createSession().pipe(Effect.provide(layer())));
     await Effect.runPromise(session.update([{ _tag: "Input", key: "cell:A1", value: number(3) }]));
     await expect(
-      Effect.runPromise(session.update([{ _tag: "Formula", key: "cell:A1", formula: "=SUM(" }])),
+      Effect.runPromise(
+        session.update([
+          { _tag: "Input", key: "cell:B1", value: number(9) },
+          { _tag: "Formula", key: "cell:A1", formula: "=SUM(" },
+        ]),
+      ),
     ).rejects.toThrow("Expected expression");
     expect(await Effect.runPromise(session.get("cell:A1"))).toEqual(number(3));
+    expect(await Effect.runPromise(session.snapshot())).toEqual(new Map());
     const result = await Effect.runPromise(
       session.update([
         { _tag: "Formula", key: "cell:A1", formula: "=B1+1" },
         { _tag: "Formula", key: "cell:B1", formula: "=A1+1" },
       ]),
     );
+    expect(result.revision).toBe(2);
     expect(result.changed.get("cell:A1")).toEqual(error("#CYCLE!"));
     expect(result.changed.get("cell:B1")).toEqual(error("#CYCLE!"));
   });

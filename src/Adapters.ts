@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import {
   EvaluationFailure,
   emptyFunctions,
@@ -30,7 +30,7 @@ export interface FormulaHost {
 }
 const fieldName = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
 
-function cellKey(name: string): string | undefined {
+function cellKey(name: string): Option.Option<string> {
   const upper = name.toUpperCase();
   const match = /^([A-Z]+)([1-9][0-9]*)$/.exec(upper);
   return match &&
@@ -38,22 +38,24 @@ function cellKey(name: string): string | undefined {
     Number.isSafeInteger(
       [...match[1]!].reduce((col, letter) => col * 26 + letter.charCodeAt(0) - 64, 0),
     )
-    ? `cell:${upper}`
-    : undefined;
+    ? Option.some(`cell:${upper}`)
+    : Option.none();
 }
-function fieldKey(name: string): string | undefined {
-  return fieldName.test(name) ? `field:${name}` : undefined;
+function fieldKey(name: string): Option.Option<string> {
+  return fieldName.test(name) ? Option.some(`field:${name}`) : Option.none();
 }
 function host(
   session: FormulaSession,
-  keyOf: (name: string) => string | undefined,
+  keyOf: (name: string) => Option.Option<string>,
   prefix: string,
 ): FormulaHost {
   const validate = (name: string): Effect.Effect<string, EvaluationFailure> => {
     const key = keyOf(name);
-    return key
-      ? Effect.succeed(key)
-      : Effect.fail(new EvaluationFailure({ message: `Invalid ${prefix} name: ${name}` }));
+    return Option.match(key, {
+      onNone: () =>
+        Effect.fail(new EvaluationFailure({ message: `Invalid ${prefix} name: ${name}` })),
+      onSome: Effect.succeed,
+    });
   };
   return {
     set: (entries) =>
@@ -109,15 +111,15 @@ export const createForm = (
     const declared = new Set<string>();
     for (const name of fields) {
       const key = fieldKey(name);
-      if (!key)
+      if (Option.isNone(key))
         return yield* Effect.fail(
           new EvaluationFailure({ message: `Invalid field name: ${name}` }),
         );
-      if (declared.has(key))
+      if (declared.has(key.value))
         return yield* Effect.fail(
           new EvaluationFailure({ message: `Duplicate field name: ${name}` }),
         );
-      declared.add(key);
+      declared.add(key.value);
     }
     const functions = yield* FunctionRegistry;
     const resolver = Layer.succeed(ReferenceResolver, {

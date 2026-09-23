@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import { matchesCriterion } from "./Criterion.js";
 import type { Scalar, Value } from "./Value.js";
 import { error, isError, number, scalar } from "./Value.js";
@@ -30,24 +31,24 @@ function numeric(name: string, values: readonly number[]): Scalar {
   return number(name.startsWith("DSTDEV") ? Math.sqrt(variance) : variance);
 }
 
-export function smallDatabase(name: string, args: readonly Value[]): Value | undefined {
-  if (
-    ![
-      "DAVERAGE",
-      "DCOUNT",
-      "DCOUNTA",
-      "DGET",
-      "DMAX",
-      "DMIN",
-      "DPRODUCT",
-      "DSTDEV",
-      "DSTDEVP",
-      "DSUM",
-      "DVAR",
-      "DVARP",
-    ].includes(name)
-  )
-    return undefined;
+const names = new Set([
+  "DAVERAGE",
+  "DCOUNT",
+  "DCOUNTA",
+  "DGET",
+  "DMAX",
+  "DMIN",
+  "DPRODUCT",
+  "DSTDEV",
+  "DSTDEVP",
+  "DSUM",
+  "DVAR",
+  "DVARP",
+]);
+export function smallDatabase(name: string, args: readonly Value[]): Option.Option<Value> {
+  return names.has(name) ? Option.some(evaluateDatabase(name, args)) : Option.none();
+}
+function evaluateDatabase(name: string, args: readonly Value[]): Value {
   if (args.length !== 3 || args[0]?._tag !== "Range" || args[2]?._tag !== "Range")
     return error("#VALUE!");
   const database = args[0].rows;
