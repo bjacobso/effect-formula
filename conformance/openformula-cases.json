@@ -1720,6 +1720,26 @@
     },
     {
       "id": "function.MATCH",
+      "name": "logical lookup follows text in approximate order",
+      "formula": "=MATCH(TRUE();[.A1:.A2];1)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Text", "value": "Z" }
+      },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "descending numeric lookup rejects text predecessor",
+      "formula": "=MATCH(10;[.A1:.A2];-1)",
+      "bindings": {
+        "cell:A1": { "_tag": "Text", "value": "Z" },
+        "cell:A2": { "_tag": "Number", "value": 5 }
+      },
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.MATCH",
       "name": "lookup error propagates",
       "formula": "=MATCH(1/0;[.A1:.A3];0)",
       "preset": "lookup",
@@ -1804,6 +1824,18 @@
       "expected": { "_tag": "Number", "value": 30 }
     },
     {
+      "id": "function.VLOOKUP",
+      "name": "logical lookup takes last text predecessor",
+      "formula": "=VLOOKUP(TRUE();[.A1:.B2];2)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 10 },
+        "cell:A2": { "_tag": "Text", "value": "Z" },
+        "cell:B2": { "_tag": "Number", "value": 20 }
+      },
+      "expected": { "_tag": "Number", "value": 20 }
+    },
+    {
       "id": "function.HLOOKUP",
       "name": "exact reference lookup",
       "formula": "=HLOOKUP(2;[.A1:.C2];2;FALSE())",
@@ -1839,6 +1871,18 @@
         "cell:C2": { "_tag": "Number", "value": 30 }
       },
       "expected": { "_tag": "Number", "value": 30 }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "logical lookup takes last text predecessor",
+      "formula": "=HLOOKUP(TRUE();[.A1:.B2];2)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Text", "value": "Z" },
+        "cell:A2": { "_tag": "Number", "value": 10 },
+        "cell:B2": { "_tag": "Number", "value": 20 }
+      },
+      "expected": { "_tag": "Number", "value": 20 }
     },
     {
       "id": "function.DAVERAGE",

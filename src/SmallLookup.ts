@@ -31,7 +31,12 @@ function matchIndex(lookup: Scalar, values: readonly Scalar[], mode: number): nu
     if (Option.isNone(comparison)) continue;
     if (mode === 1 ? comparison.value <= 0 : comparison.value >= 0) found = i;
   }
-  if (found >= 0 && values[found]!._tag !== lookup._tag) return -1;
+  if (
+    found >= 0 &&
+    ((mode === 1 && lookup._tag === "Text" && values[found]!._tag === "Number") ||
+      (mode === -1 && lookup._tag === "Number" && values[found]!._tag === "Text"))
+  )
+    return -1;
   return found;
 }
 
