@@ -22,6 +22,7 @@ import {
   toNumber,
   toText,
 } from "./Value.js";
+import { valueText } from "./ValueText.js";
 
 export class ResolutionFailure extends Data.TaggedError("ResolutionFailure")<{
   readonly key: string;
@@ -229,7 +230,7 @@ function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
     case "/":
       return b.value === 0 ? error("#DIV/0!") : number(a.value / b.value);
     case "^":
-      return number(a.value ** b.value);
+      return a.value === 0 && b.value === 0 ? error("#NUM!") : number(a.value ** b.value);
     default:
       return error("#VALUE!");
   }
@@ -270,10 +271,14 @@ const builtInNames = new Set(
     " ",
   ),
 );
-function builtIn(name: string, args: readonly Value[]): Option.Option<Scalar> {
-  return builtInNames.has(name) ? Option.some(evaluateBuiltIn(name, args)) : Option.none();
+function builtIn(
+  name: string,
+  args: readonly Value[],
+  options: EvalOptions,
+): Option.Option<Scalar> {
+  return builtInNames.has(name) ? Option.some(evaluateBuiltIn(name, args, options)) : Option.none();
 }
-function evaluateBuiltIn(name: string, args: readonly Value[]): Scalar {
+function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOptions): Scalar {
   const unary = (fn: (value: number) => number): Scalar => {
     if (args.length !== 1) return error("#VALUE!");
     const value = toNumber(scalar(args[0]!));
@@ -343,7 +348,9 @@ function evaluateBuiltIn(name: string, args: readonly Value[]): Scalar {
     case "INT":
       return unary(Math.floor);
     case "POWER":
-      return binary((left, right) => number(left ** right));
+      return binary((left, right) =>
+        left === 0 && right === 0 ? error("#NUM!") : number(left ** right),
+      );
     case "ATAN2":
       return binary((x, y) => (x === 0 && y === 0 ? error("#NUM!") : number(Math.atan2(y, x))));
     case "MOD":
@@ -472,7 +479,7 @@ function evaluateBuiltIn(name: string, args: readonly Value[]): Scalar {
     case "VALUE": {
       if (args.length !== 1) return error("#VALUE!");
       const value = stringArg(0);
-      return isError(value) ? value : toNumber(value);
+      return isError(value) ? value : valueText(value.value, options);
     }
     case "ROWS":
     case "COLUMNS": {
@@ -688,7 +695,7 @@ export function evaluate(
               return aggregate(name, args);
             return Option.getOrElse(
               pipe(
-                builtIn(name, args),
+                builtIn(name, args, options),
                 Option.orElse(() => smallExtra(name, args)),
                 Option.orElse(() => smallDate(name, args, options)),
                 Option.orElse(() => smallFinance(name, args)),

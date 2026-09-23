@@ -15,6 +15,12 @@ const obligations = groups.flatMap((group) => [
   ...group.requirements.map((item) => ({ ...item, group: group.name })),
   ...group.functions.map((item) => ({ id: `function.${item.name}`, section: item.section, group: group.name })),
 ]);
+const obligationIds = new Set(inventory.groups.flatMap((group) => [
+  ...group.requirements.map((item) => item.id),
+  ...group.functions.map((item) => `function.${item.name}`),
+]));
+if (new Set(audits.verified).size !== audits.verified.length || audits.verified.some((id) => !obligationIds.has(id)))
+  throw new Error("Audit list contains duplicate or unknown requirement IDs");
 const cases = new Map();
 for (const sample of corpus.cases) {
   const list = cases.get(sample.id) ?? [];

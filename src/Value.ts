@@ -51,7 +51,8 @@ export function toNumber(value: Scalar): Extract<Scalar, { _tag: "Number" | "Err
       return number(value.value ? 1 : 0);
     case "Text": {
       const trimmed = value.value.trim();
-      return trimmed && Number.isFinite(Number(trimmed))
+      return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed) &&
+        Number.isFinite(Number(trimmed))
         ? number(Number(trimmed))
         : error("#VALUE!");
     }

@@ -34,13 +34,15 @@ Conversions are centralized. The current first-slice rules are:
 
 | Context | Blank | Number | Text | Boolean | Error |
 | --- | --- | --- | --- | --- | --- |
-| Arithmetic | `0` | unchanged | finite numeric text converts; other text gives `#VALUE!` | `0` or `1` | propagates |
+| Arithmetic | `0` | unchanged | finite invariant decimal text converts; other text gives `#VALUE!` | `0` or `1` | propagates |
 | Logical argument | `FALSE` | zero is `FALSE`; nonzero is `TRUE` | `#VALUE!` | unchanged | propagates |
 | Concatenation | empty text | decimal text | unchanged | `TRUE` or `FALSE` | propagates |
-| Direct aggregate argument | ignored | included | finite numeric text included; other text gives `#VALUE!` | included as `0` or `1` | propagates |
+| Direct aggregate argument | ignored | included | finite invariant decimal text included; other text gives `#VALUE!` | included as `0` or `1` | propagates |
 | Range aggregate entry | ignored | included | ignored | ignored | propagates |
 
 Equality compares like types, with case-insensitive text comparison; different types compare unequal. Ordering uses numeric ordering when both inputs are Numbers and text ordering otherwise. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type ordering need further audit.
+
+`VALUE` implements OpenFormula's required invariant numbers, en-US numeric grouping and currency, mixed fractions, times, ISO dates and datetimes, and common en-US dates. Text-to-Number conversion elsewhere uses the narrower invariant decimal grammar. Dates use the configured epoch and UTC arithmetic; two-digit en-US years use a 1930–2029 window. Other locales and date formats remain to do. `0^0` and `POWER(0;0)` return `#NUM!` per the power constraint.
 
 ## 5. Evaluation and Effect API
 

@@ -25,6 +25,7 @@ const corpus = read("openformula-cases.json") as {
   readonly cases: readonly Sample[];
   readonly presets?: Readonly<Record<string, Readonly<Record<string, Value>>>>;
 };
+const audits = read("audits.json") as { readonly verified: readonly string[] };
 const samples = corpus.cases;
 
 describe("OpenFormula 1.4 inventory", () => {
@@ -35,6 +36,11 @@ describe("OpenFormula 1.4 inventory", () => {
       ...group.requirements.map((requirement) => requirement.id),
     ]);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(audits.verified).size).toBe(audits.verified.length);
+    for (const id of audits.verified) {
+      expect(ids).toContain(id);
+      expect(samples.some((sample) => sample.id === id)).toBe(true);
+    }
     for (const sample of samples) expect(ids).toContain(sample.id);
     const sampled = new Set(samples.map((sample) => sample.id));
     for (const fn of inventory.groups[0]!.functions)

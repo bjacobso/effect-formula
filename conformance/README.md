@@ -2,7 +2,7 @@
 
 The source of truth is [ODF 1.4 Part 4, section 2.3](https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html). `openformula-1.4-inventory.json` records the functions explicitly listed for the Small, Medium, and Large evaluator groups, plus the separately listed syntax, conversion, limit, and operator requirements. Medium and Large inherit the earlier groups. The inventory has 141, 164, and 122 entries respectively, for 427 cumulative entries. These are tracking units, not a claim that one case can prove a whole section.
 
-`openformula-cases.json` contains independently written examples linked to inventory IDs. `audits.json` lists requirements that have undergone a complete section-level semantic audit. It is empty: passing an example leaves its requirement **sampled**. Keep it empty until normal, boundary, error, reference, and type cases required by a section have been reviewed and tested.
+`openformula-cases.json` contains independently written examples linked to inventory IDs. `audits.json` lists requirements that have undergone a complete section-level semantic audit. `FALSE` (§6.15.3) and `TRUE` (§6.15.9) have been audited for their constant return, zero-parameter constraint, distinct Logical type, and numeric conversion. Passing an example alone leaves other requirements **sampled**; add an audit entry only after reviewing the full section and its applicable boundary, error, reference, and type behavior.
 
 The Small Group currently has a passing sample for each of its 141 tracked entries. The corpus supports reusable cell-binding presets, a fixed clock for date functions, and explicit numeric tolerances for iterative calculations. A sample proves only the stated example; it does not establish full support for the referenced section.
 
