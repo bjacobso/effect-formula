@@ -1,4 +1,5 @@
 import { Context, Data, Effect, Layer, Option, pipe } from "effect";
+import { addressKey, columnLetters, type GridBounds, parseAddress, sameSheet } from "./Address.js";
 import { matchesCriterion } from "./Criterion.js";
 import type { Ast } from "./Parser.js";
 import { smallDatabase } from "./SmallDatabase.js";
@@ -67,47 +68,52 @@ export const memory = (values: ReadonlyMap<string, Value>) =>
 export interface EvalOptions extends DateOptions {
   readonly maxSteps?: number;
   readonly maxRangeCells?: number;
-}
-function cell(key: string): Option.Option<{ col: number; row: number }> {
-  const match = /^cell:([A-Z]+)([1-9][0-9]*)$/.exec(key);
-  if (!match) return Option.none();
-  let col = 0;
-  for (const letter of match[1]!) col = col * 26 + letter.charCodeAt(0) - 64;
-  const row = Number(match[2]);
-  return Number.isSafeInteger(col) && Number.isSafeInteger(row)
-    ? Option.some({ col, row })
-    : Option.none();
-}
-function keyOf(col: number, row: number): string {
-  let name = "";
-  for (let n = col; n > 0; n = Math.floor((n - 1) / 26))
-    name = String.fromCharCode(65 + ((n - 1) % 26)) + name;
-  return `cell:${name}${row}`;
+  readonly grid?: GridBounds;
 }
 export function rangeKeys(
   start: string,
   end: string,
   max = 10000,
+  grid?: GridBounds,
 ): Option.Option<readonly (readonly string[])[]> {
-  const a = cell(start);
-  const b = cell(end);
-  if (Option.isNone(a) || Option.isNone(b)) return Option.none();
-  const width = Math.abs(b.value.col - a.value.col) + 1;
-  const height = Math.abs(b.value.row - a.value.row) + 1;
-  if (!Number.isSafeInteger(width * height) || width * height > max) return Option.none();
+  const a = parseAddress(start);
+  const b = parseAddress(end);
+  if (
+    Option.isNone(a) ||
+    Option.isNone(b) ||
+    a.value.kind !== b.value.kind ||
+    !sameSheet(a.value, b.value)
+  )
+    return Option.none();
+  if (
+    grid &&
+    (!Number.isSafeInteger(grid.rows) ||
+      !Number.isSafeInteger(grid.columns) ||
+      grid.rows < 1 ||
+      grid.columns < 1)
+  )
+    return Option.none();
+  if (a.value.kind !== "cell" && !grid) return Option.none();
+  const firstColumn = a.value.kind === "row" ? 1 : Math.min(a.value.column, b.value.column);
+  const lastColumn =
+    a.value.kind === "row" ? grid!.columns : Math.max(a.value.column, b.value.column);
+  const firstRow = a.value.kind === "column" ? 1 : Math.min(a.value.row, b.value.row);
+  const lastRow = a.value.kind === "column" ? grid!.rows : Math.max(a.value.row, b.value.row);
+  const width = lastColumn - firstColumn + 1;
+  const height = lastRow - firstRow + 1;
+  if (grid && (lastColumn > grid.columns || lastRow > grid.rows)) return Option.none();
+  if (
+    !Number.isSafeInteger(max) ||
+    max < 1 ||
+    !Number.isSafeInteger(width * height) ||
+    width * height > max
+  )
+    return Option.none();
   const rows: string[][] = [];
-  for (
-    let row = Math.min(a.value.row, b.value.row);
-    row <= Math.max(a.value.row, b.value.row);
-    row++
-  ) {
+  for (let row = firstRow; row <= lastRow; row++) {
     const keys: string[] = [];
-    for (
-      let col = Math.min(a.value.col, b.value.col);
-      col <= Math.max(a.value.col, b.value.col);
-      col++
-    )
-      keys.push(keyOf(col, row));
+    for (let col = firstColumn; col <= lastColumn; col++)
+      keys.push(addressKey("cell", `${columnLetters(col)}${row}`, a.value.sheet));
     rows.push(keys);
   }
   return Option.some(rows);
@@ -115,35 +121,46 @@ export function rangeKeys(
 export function referenceKeys(
   node: Ast,
   max = 10000,
+  grid?: GridBounds,
 ): Option.Option<readonly (readonly string[])[]> {
   if (node._tag === "Reference")
-    return Option.isSome(cell(node.key)) ? Option.some([[node.key]]) : Option.none();
-  return node._tag === "Range" ? rangeKeys(node.start, node.end, max) : Option.none();
+    return Option.isSome(parseAddress(node.key)) && node.key.startsWith("cell:")
+      ? Option.some([[node.key]])
+      : Option.none();
+  return node._tag === "Range" ? rangeKeys(node.start, node.end, max, grid) : Option.none();
 }
 /** Expand a result reference from its top-left cell to the criteria range geometry. */
 export function offsetReferenceKeys(
   source: Ast,
   result: Ast,
   max = 10000,
+  grid?: GridBounds,
 ): Option.Option<readonly (readonly string[])[]> {
-  const shape = referenceKeys(source, max);
+  const shape = referenceKeys(source, max, grid);
   const topLeft =
     result._tag === "Reference"
-      ? cell(result.key)
+      ? parseAddress(result.key)
       : result._tag === "Range"
-        ? cell(result.start)
+        ? parseAddress(result.start)
         : Option.none();
-  if (Option.isNone(shape) || Option.isNone(topLeft)) return Option.none();
+  if (Option.isNone(shape) || Option.isNone(topLeft) || topLeft.value.kind !== "cell")
+    return Option.none();
   const position = { ...topLeft.value };
   if (result._tag === "Range") {
-    const end = cell(result.end);
-    if (Option.isNone(end)) return Option.none();
-    position.col = Math.min(position.col, end.value.col);
+    const end = parseAddress(result.end);
+    if (Option.isNone(end) || end.value.kind !== "cell") return Option.none();
+    position.column = Math.min(position.column, end.value.column);
     position.row = Math.min(position.row, end.value.row);
   }
   return Option.some(
     shape.value.map((row, rowIndex) =>
-      row.map((_, colIndex) => keyOf(position.col + colIndex, position.row + rowIndex)),
+      row.map((_, colIndex) =>
+        addressKey(
+          "cell",
+          `${columnLetters(position.column + colIndex)}${position.row + rowIndex}`,
+          position.sheet,
+        ),
+      ),
     ),
   );
 }
@@ -516,7 +533,12 @@ export function evaluate(
           case "Reference":
             return yield* resolver.get(node.key);
           case "Range": {
-            const keys = rangeKeys(node.start, node.end, options.maxRangeCells ?? 10000);
+            const keys = rangeKeys(
+              node.start,
+              node.end,
+              options.maxRangeCells ?? 10000,
+              options.grid,
+            );
             if (Option.isNone(keys)) return error("#REF!");
             const rows: Scalar[][] = [];
             for (const row of keys.value) {
@@ -535,8 +557,8 @@ export function evaluate(
           }
           case "Binary":
             if (node.operator === "!") {
-              const left = referenceKeys(node.left, options.maxRangeCells ?? 10000);
-              const right = referenceKeys(node.right, options.maxRangeCells ?? 10000);
+              const left = referenceKeys(node.left, options.maxRangeCells ?? 10000, options.grid);
+              const right = referenceKeys(node.right, options.maxRangeCells ?? 10000, options.grid);
               if (Option.isNone(left) || Option.isNone(right)) return error("#VALUE!");
               const rightKeys = new Set(right.value.flat());
               const common = left.value
@@ -570,7 +592,11 @@ export function evaluate(
                 return error("#VALUE!");
               const source = node.args[0]!;
               if (source._tag !== "Reference" && source._tag !== "Range") return error("#VALUE!");
-              const sourceKeys = referenceKeys(source, options.maxRangeCells ?? 10000);
+              const sourceKeys = referenceKeys(
+                source,
+                options.maxRangeCells ?? 10000,
+                options.grid,
+              );
               if (Option.isNone(sourceKeys) || !sourceKeys.value[0]?.length) return error("#REF!");
               const criterion = scalar(yield* visit(node.args[1]!));
               if (isError(criterion)) return criterion;
@@ -578,7 +604,12 @@ export function evaluate(
               if (node.args[2]) {
                 const result = node.args[2];
                 if (result._tag !== "Reference" && result._tag !== "Range") return error("#VALUE!");
-                const offset = offsetReferenceKeys(source, result, options.maxRangeCells ?? 10000);
+                const offset = offsetReferenceKeys(
+                  source,
+                  result,
+                  options.maxRangeCells ?? 10000,
+                  options.grid,
+                );
                 if (Option.isNone(offset)) return error("#REF!");
                 resultKeys = offset.value;
               }

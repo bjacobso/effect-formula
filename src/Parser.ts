@@ -1,4 +1,5 @@
 import { Data, Effect, Option } from "effect";
+import { addressKey, parseAddress, sameSheet } from "./Address.js";
 import type { Scalar } from "./Value.js";
 import { bool, error, number, text } from "./Value.js";
 
@@ -7,6 +8,7 @@ export interface ParseOptions {
   readonly dialect?: Dialect;
   readonly maxLength?: number;
   readonly maxDepth?: number;
+  readonly currentSheet?: string;
 }
 export type Ast =
   | { readonly _tag: "Missing" }
@@ -34,6 +36,71 @@ interface Token {
   readonly offset: number;
 }
 const cellPattern = /^\$?[A-Z]+\$?[1-9][0-9]*$/i;
+function odfAddress(part: string, localSheet: Option.Option<string>, offset: number): string {
+  const match = /^(.*)\.(\$?[A-Z]+\$?[1-9][0-9]*|\$?[A-Z]+|\$?[1-9][0-9]*)$/.exec(part);
+  if (!match) throw new ParseError({ message: "Invalid OpenFormula reference", offset });
+  const locator = match[1]!;
+  let sheet = localSheet;
+  if (locator) {
+    const raw = locator.startsWith("$") ? locator.slice(1) : locator;
+    if (raw.startsWith("'")) {
+      if (!/^'(?:[^']|'')+'$/.test(raw))
+        throw new ParseError({ message: "Invalid sheet name", offset });
+      sheet = Option.some(raw.slice(1, -1).replaceAll("''", "'"));
+    } else {
+      if (!raw || [...raw].some((character) => "]. #$'".includes(character)))
+        throw new ParseError({ message: "Invalid sheet name", offset });
+      sheet = Option.some(raw);
+    }
+  }
+  const value = match[2]!.replaceAll("$", "");
+  const kind = /^[A-Z]+[1-9]/.test(value) ? "cell" : /^[A-Z]+$/.test(value) ? "column" : "row";
+  const key = addressKey(kind, value, sheet);
+  if (Option.isNone(parseAddress(key)))
+    throw new ParseError({ message: "Invalid OpenFormula address", offset });
+  return key;
+}
+function odfReference(value: string, localSheet: Option.Option<string>, offset: number): Ast {
+  if (value === "#REF!") return { _tag: "Literal", value: error("#REF!") };
+  const parts: string[] = [];
+  let quoted = false;
+  let startIndex = 0;
+  for (let index = 0; index < value.length; index++) {
+    if (value[index] === "'") {
+      if (quoted && value[index + 1] === "'") {
+        index++;
+        continue;
+      }
+      quoted = !quoted;
+    } else if (value[index] === ":" && !quoted) {
+      parts.push(value.slice(startIndex, index));
+      startIndex = index + 1;
+    }
+  }
+  parts.push(value.slice(startIndex));
+  if (parts.length > 2) throw new ParseError({ message: "Invalid OpenFormula range", offset });
+  const start = odfAddress(parts[0]!, localSheet, offset);
+  if (parts.length === 1) {
+    if (!start.startsWith("cell:"))
+      throw new ParseError({
+        message: "Whole-row and whole-column references require a range",
+        offset,
+      });
+    return { _tag: "Reference", key: start };
+  }
+  const inheritedSheet = Option.flatMap(parseAddress(start), (address) => address.sheet);
+  const end = odfAddress(parts[1]!, inheritedSheet, offset);
+  const a = parseAddress(start);
+  const b = parseAddress(end);
+  if (
+    Option.isNone(a) ||
+    Option.isNone(b) ||
+    a.value.kind !== b.value.kind ||
+    !sameSheet(a.value, b.value)
+  )
+    throw new ParseError({ message: "Range endpoints must have the same kind and sheet", offset });
+  return { _tag: "Range", start, end };
+}
 function lex(source: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -78,10 +145,22 @@ function lex(source: string): Token[] {
       continue;
     }
     if (source[i] === "[") {
-      const end = source.indexOf("]", i + 1);
-      if (end < 0) throw new ParseError({ message: "Unclosed field reference", offset });
+      let end = i + 1;
+      let quoted = false;
+      for (; end < source.length; end++) {
+        if (source[end] === "'") {
+          if (quoted && source[end + 1] === "'") {
+            end++;
+            continue;
+          }
+          quoted = !quoted;
+        }
+        if (source[end] === "]" && !quoted) break;
+      }
+      if (end === source.length)
+        throw new ParseError({ message: "Unclosed field reference", offset });
       const value = source.slice(i + 1, end);
-      if (/^\.\$?[A-Z]+\$?[1-9][0-9]*(?::\.\$?[A-Z]+\$?[1-9][0-9]*)?$/.test(value)) {
+      if (/\.(?:\$?[A-Z][A-Z0-9$]*|\$?[0-9]+)(?::|$)/.test(value) || value === "#REF!") {
         tokens.push({ kind: "odfReference", value, offset });
         i = end + 1;
         continue;
@@ -132,6 +211,7 @@ class Reader {
     readonly separator: string,
     readonly maxDepth: number,
     readonly dialect: Dialect,
+    readonly currentSheet: Option.Option<string>,
   ) {}
   get current(): Token {
     return this.tokens[this.index]!;
@@ -169,6 +249,10 @@ class Reader {
           !right.key.startsWith("cell:")
         )
           this.fail("Range endpoints must be cells");
+        const a = parseAddress(left.key);
+        const b = parseAddress(right.key);
+        if (Option.isNone(a) || Option.isNone(b) || !sameSheet(a.value, b.value))
+          this.fail("Range endpoints must be on the same sheet");
         left = { _tag: "Range", start: left.key, end: right.key };
         continue;
       }
@@ -204,14 +288,8 @@ class Reader {
     if (token.kind === "string") return { _tag: "Literal", value: text(token.value) };
     if (token.kind === "error")
       return { _tag: "Literal", value: error(token.value as Parameters<typeof error>[0]) };
-    if (token.kind === "odfReference") {
-      const addresses = token.value
-        .split(":")
-        .map((part) => `cell:${part.slice(1).replaceAll("$", "")}`);
-      return addresses.length === 1
-        ? { _tag: "Reference", key: addresses[0]! }
-        : { _tag: "Range", start: addresses[0]!, end: addresses[1]! };
-    }
+    if (token.kind === "odfReference")
+      return odfReference(token.value, this.currentSheet, token.offset);
     if (token.kind === "field") return { _tag: "Reference", key: `field:${token.value}` };
     if (token.kind === "word") {
       const word = token.value.toUpperCase();
@@ -233,7 +311,10 @@ class Reader {
       if (word === "TRUE" || word === "FALSE")
         return { _tag: "Literal", value: bool(word === "TRUE") };
       if (cellPattern.test(word))
-        return { _tag: "Reference", key: `cell:${word.replaceAll("$", "")}` };
+        return {
+          _tag: "Reference",
+          key: addressKey("cell", word.replaceAll("$", ""), this.currentSheet),
+        };
       const name = word.startsWith("$$") ? word.slice(2) : word;
       return { _tag: "Reference", key: `name:${name}` };
     }
@@ -253,6 +334,7 @@ export function parseSync(formula: string, options: ParseOptions = {}): Ast {
     options.dialect === "excel" ? "," : ";",
     options.maxDepth ?? 100,
     options.dialect ?? "openformula",
+    Option.fromNullable(options.currentSheet),
   );
   const ast = reader.expression();
   if (reader.current.kind !== "eof") reader.fail("Unexpected token");

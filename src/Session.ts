@@ -1,4 +1,5 @@
 import { Effect, Layer, Option, Ref, Schema } from "effect";
+import { type GridBounds, parseAddress, sheetOfKey } from "./Address.js";
 import {
   type EvalOptions,
   EvaluationFailure,
@@ -37,13 +38,16 @@ interface SessionState {
   readonly results: ReadonlyMap<string, Value>;
   readonly revision: number;
 }
-function dependencyKeys(ast: Ast, limit: number): ReadonlySet<string> {
+function dependencyKeys(ast: Ast, limit: number, grid?: GridBounds): ReadonlySet<string> {
   const keys = new Set<string>(references(ast));
   const emptyKeys: readonly (readonly string[])[] = [];
   const visit = (node: Ast): void => {
     switch (node._tag) {
       case "Range":
-        for (const row of Option.getOrElse(rangeKeys(node.start, node.end, limit), () => emptyKeys))
+        for (const row of Option.getOrElse(
+          rangeKeys(node.start, node.end, limit, grid),
+          () => emptyKeys,
+        ))
           for (const key of row) keys.add(key);
         break;
       case "Unary":
@@ -56,7 +60,7 @@ function dependencyKeys(ast: Ast, limit: number): ReadonlySet<string> {
       case "Call":
         if ((node.name === "SUMIF" || node.name === "AVERAGEIF") && node.args[0] && node.args[2])
           for (const row of Option.getOrElse(
-            offsetReferenceKeys(node.args[0], node.args[2], limit),
+            offsetReferenceKeys(node.args[0], node.args[2], limit, grid),
             () => emptyKeys,
           ))
             for (const key of row) keys.add(key);
@@ -71,10 +75,11 @@ function affected(
   formulas: ReadonlyMap<string, Ast>,
   touched: ReadonlySet<string>,
   limit: number,
+  grid?: GridBounds,
 ): Set<string> {
   const reverse = new Map<string, Set<string>>();
   for (const [key, ast] of formulas)
-    for (const dep of dependencyKeys(ast, limit)) {
+    for (const dep of dependencyKeys(ast, limit, grid)) {
       const users = reverse.get(dep) ?? new Set<string>();
       users.add(key);
       reverse.set(dep, users);
@@ -128,9 +133,8 @@ export const createSession = (
           for (const entry of updates) {
             if (
               !entry.key ||
-              !/^(?:cell:[A-Z]+[1-9][0-9]*|field:[A-Za-z_][A-Za-z0-9_.-]*|name:[A-Z_][A-Z0-9_.]*)$/.test(
-                entry.key,
-              )
+              (!(entry.key.startsWith("cell:") && Option.isSome(parseAddress(entry.key))) &&
+                !/^(?:field:[A-Za-z_][A-Za-z0-9_.-]*|name:[A-Z_][A-Z0-9_.]*)$/.test(entry.key))
             )
               return yield* Effect.fail(
                 new EvaluationFailure({ message: `Invalid reference key: ${entry.key}` }),
@@ -157,7 +161,13 @@ export const createSession = (
               }
               case "Formula": {
                 const ast = yield* Effect.try({
-                  try: () => parseSync(entry.formula, options),
+                  try: () => {
+                    const sheet = sheetOfKey(entry.key);
+                    return parseSync(
+                      entry.formula,
+                      Option.isSome(sheet) ? { ...options, currentSheet: sheet.value } : options,
+                    );
+                  },
                   catch: (cause) =>
                     cause instanceof ParseError
                       ? cause
@@ -174,7 +184,12 @@ export const createSession = (
                 break;
             }
           }
-          const dirty = affected(nextFormulas, touched, options.maxRangeCells ?? 10000);
+          const dirty = affected(
+            nextFormulas,
+            touched,
+            options.maxRangeCells ?? 10000,
+            options.grid,
+          );
           const active = new Set<string>();
           const computed = new Map<string, Value>();
           const compute = (

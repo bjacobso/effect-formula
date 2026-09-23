@@ -306,6 +306,28 @@
       }
     },
     {
+      "id": "syntax.references",
+      "name": "quoted sheet reference",
+      "formula": "=['Sales West'.A1]",
+      "bindings": {
+        "cell:Sales%20West!A1": { "_tag": "Number", "value": 11 }
+      },
+      "expected": { "_tag": "Number", "value": 11 }
+    },
+    {
+      "id": "syntax.references",
+      "name": "bounded whole column",
+      "formula": "=SUM([Sales.A:.B])",
+      "grid": { "rows": 2, "columns": 2 },
+      "bindings": {
+        "cell:Sales!A1": { "_tag": "Number", "value": 2 },
+        "cell:Sales!A2": { "_tag": "Number", "value": 3 },
+        "cell:Sales!B1": { "_tag": "Number", "value": 5 },
+        "cell:Sales!B2": { "_tag": "Number", "value": 7 }
+      },
+      "expected": { "_tag": "Number", "value": 17 }
+    },
+    {
       "id": "syntax.basic-expressions",
       "name": "forced recalculate marker",
       "formula": "==2+3",

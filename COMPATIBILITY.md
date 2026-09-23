@@ -1,12 +1,12 @@
 # Compatibility status
 
-This project implements an independent subset of [OpenFormula 1.4](https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html). No OpenFormula evaluator conformance group or full Excel compatibility is claimed. One-sheet `[.A1]` references are accepted, while grid-style `A1` and `[field]` are product syntax; this is not a full ODF formula interchange parser. [conformance/rules.json](conformance/rules.json) is the original focused rule matrix. The [group tracker](conformance/README.md) inventories the listed ODF evaluator group capabilities and distinguishes passing samples from audited requirements.
+This project implements an independent subset of [OpenFormula 1.4](https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html). No OpenFormula evaluator conformance group or full Excel compatibility is claimed. Bracket references on a default or named sheet are accepted, while grid-style `A1` and `[field]` are product syntax; this is not a full ODF formula interchange parser. [conformance/rules.json](conformance/rules.json) is the original focused rule matrix. The [group tracker](conformance/README.md) inventories the listed ODF evaluator group capabilities and distinguishes passing samples from audited requirements.
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Scalars and formula errors | Supported subset | Blank, finite number, text, boolean, and common error values. Dates and times use numeric serials with a configurable epoch; complex numbers are absent. |
 | Operators | Supported subset | Unary signs, arithmetic, exponentiation, concatenation, and comparisons. Coercion uses the first-slice rules in `Value.ts`. |
-| References | Supported subset | One-sheet A1 cells, rectangular ranges, and form fields. No cross-sheet, named, or external references. |
+| References | Supported subset | Qualified cells and same-sheet ranges, including whole rows and columns with explicit grid bounds, plus form fields. Cross-sheet spans, external IRI sources, and subtable locators remain unsupported. |
 | Functions | Sampled | All 110 Small Group functions have at least one passing example. Date, finance, lookup, database, aggregate, and text semantics still need section-level edge audits. Criteria use whole-cell matching without regular expressions or wildcards. Host profiles can register, override, or remove names. |
 | Recalculation | Project behavior | Batch updates, affected formula recalculation, cycles, async update serialization. |
 | Host adapters | Project behavior | Spreadsheet cells default to blank; declared form fields default to blank; unknown form fields produce `#REF!`. |

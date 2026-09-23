@@ -10,6 +10,7 @@ interface Sample {
   readonly bindings?: Readonly<Record<string, Value>>;
   readonly preset?: string;
   readonly clock?: string;
+  readonly grid?: { readonly rows: number; readonly columns: number };
   readonly tolerance?: number;
   readonly expected: Value;
 }
@@ -53,9 +54,10 @@ describe("OpenFormula 1.4 inventory", () => {
         Object.entries({ ...corpus.presets?.[sample.preset ?? ""], ...sample.bindings }),
       );
       const result = await Effect.runPromise(
-        evaluate(ast, sample.clock ? { clock: () => new Date(sample.clock!) } : {}).pipe(
-          Effect.provide(Layer.merge(memory(values), emptyFunctions)),
-        ),
+        evaluate(ast, {
+          ...(sample.clock ? { clock: () => new Date(sample.clock!) } : {}),
+          ...(sample.grid ? { grid: sample.grid } : {}),
+        }).pipe(Effect.provide(Layer.merge(memory(values), emptyFunctions))),
       );
       if (
         sample.tolerance !== undefined &&
