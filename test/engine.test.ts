@@ -11,6 +11,7 @@ import {
   parse,
   parseSync,
   ReferenceResolver,
+  range,
   text,
   type Value,
 } from "../src/index.js";
@@ -75,6 +76,18 @@ describe("one-shot evaluation", () => {
         evaluate(ast).pipe(Effect.provide(Layer.merge(memory(new Map()), functions))),
       ),
     ).toEqual(number(42));
+  });
+  it("accepts a range returned by a registered function as a lookup source", async () => {
+    const functions = Layer.succeed(FunctionRegistry, {
+      functions: new Map([["VALUES", () => Effect.succeed(range([[number(1)], [number(2)]]))]]),
+    });
+    expect(
+      await Effect.runPromise(
+        evaluate(parseSync("=MATCH(2;VALUES();0)")).pipe(
+          Effect.provide(Layer.merge(memory(new Map()), functions)),
+        ),
+      ),
+    ).toEqual(number(2));
   });
   it("resolves simple named expressions and reference intersection", async () => {
     expect(await run("=TAX*2", new Map([["name:TAX", number(3)]]))).toEqual(number(6));

@@ -690,6 +690,20 @@ export function evaluate(
             }
             const args: Value[] = [];
             for (const arg of node.args) args.push(yield* visit(arg));
+            if (["INDEX", "MATCH", "HLOOKUP", "VLOOKUP"].includes(name)) {
+              const sourcePosition = name === "INDEX" ? 0 : 1;
+              const source = args[sourcePosition];
+              const sourceNode = node.args[sourcePosition];
+              if (source && isError(source)) return source;
+              if (
+                source &&
+                source._tag !== "Range" &&
+                sourceNode?._tag !== "Reference" &&
+                sourceNode?._tag !== "Range" &&
+                !(sourceNode?._tag === "Binary" && sourceNode.operator === "!")
+              )
+                return error("#VALUE!");
+            }
             if (
               name === "COUNTBLANK" &&
               (node.args.length !== 1 || !["Reference", "Range"].includes(node.args[0]?._tag ?? ""))

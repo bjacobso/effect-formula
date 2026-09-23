@@ -1164,6 +1164,12 @@
       }
     },
     {
+      "id": "function.INDEX",
+      "name": "scalar literal is not a data source",
+      "formula": "=INDEX(2;1;1)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
       "id": "function.MATCH",
       "name": "exact reference lookup",
       "formula": "=MATCH(2;[.A1:.A3];0)",
@@ -1172,6 +1178,89 @@
         "_tag": "Number",
         "value": 2
       }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "exact match takes first duplicate in unsorted column",
+      "formula": "=MATCH(2;[.A1:.A4];0)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 3 },
+        "cell:A2": { "_tag": "Number", "value": 2 },
+        "cell:A3": { "_tag": "Number", "value": 1 },
+        "cell:A4": { "_tag": "Number", "value": 2 }
+      },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "ascending approximate match takes last duplicate",
+      "formula": "=MATCH(2.5;[.A1:.A4])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Number", "value": 2 },
+        "cell:A3": { "_tag": "Number", "value": 2 },
+        "cell:A4": { "_tag": "Number", "value": 3 }
+      },
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "descending approximate match takes last duplicate",
+      "formula": "=MATCH(2.5;[.A1:.A4];-1)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 4 },
+        "cell:A2": { "_tag": "Number", "value": 3 },
+        "cell:A3": { "_tag": "Number", "value": 3 },
+        "cell:A4": { "_tag": "Number", "value": 2 }
+      },
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "text exact match ignores case",
+      "formula": "=MATCH(\"alpha\";[.A1:.A2];0)",
+      "bindings": {
+        "cell:A1": { "_tag": "Text", "value": "ALPHA" },
+        "cell:A2": { "_tag": "Text", "value": "alpha" }
+      },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "mixed type approximate match does not return number for text",
+      "formula": "=MATCH(\"A\";[.A1:.A2];1)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 2 },
+        "cell:A2": { "_tag": "Text", "value": "B" }
+      },
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "lookup error propagates",
+      "formula": "=MATCH(1/0;[.A1:.A3];0)",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "single cell reference is a valid search region",
+      "formula": "=MATCH(2;[.A2];0)",
+      "preset": "lookup",
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "scalar literal is not a search region",
+      "formula": "=MATCH(2;2;0)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "two dimensional search region is invalid",
+      "formula": "=MATCH(2;[.A1:.B3];0)",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
       "id": "function.VLOOKUP",
@@ -1184,6 +1273,19 @@
       }
     },
     {
+      "id": "function.VLOOKUP",
+      "name": "lookup error propagates",
+      "formula": "=VLOOKUP(1/0;[.A1:.B3];2;FALSE())",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "scalar literal is not a data source",
+      "formula": "=VLOOKUP(2;2;1;FALSE())",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
       "id": "function.HLOOKUP",
       "name": "exact reference lookup",
       "formula": "=HLOOKUP(2;[.A1:.C2];2;FALSE())",
@@ -1192,6 +1294,19 @@
         "_tag": "Number",
         "value": 20
       }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "lookup error propagates",
+      "formula": "=HLOOKUP(1/0;[.A1:.C2];2;FALSE())",
+      "preset": "horizontal",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "scalar literal is not a data source",
+      "formula": "=HLOOKUP(2;2;1;FALSE())",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
       "id": "function.DAVERAGE",

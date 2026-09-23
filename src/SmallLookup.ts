@@ -60,17 +60,21 @@ function evaluateLookup(name: string, args: readonly Value[]): Value {
   }
   if (name === "MATCH") {
     if (args.length < 2 || args.length > 3) return error("#VALUE!");
+    const lookup = scalar(args[0]!);
+    if (isError(lookup)) return lookup;
     const rows = table(args[1]!);
     if (rows.length > 1 && rows[0]!.length > 1) return error("#VALUE!");
     const mode = args[2] ? toNumber(scalar(args[2])) : number(1);
     if (isError(mode)) return mode;
     if (![-1, 0, 1].includes(mode.value)) return error("#VALUE!");
     const candidates = rows.flat();
-    const index = matchIndex(scalar(args[0]!), candidates, mode.value);
+    const index = matchIndex(lookup, candidates, mode.value);
     return index < 0 ? error("#N/A") : number(index + 1);
   }
   if (name === "HLOOKUP" || name === "VLOOKUP") {
     if (args.length < 3 || args.length > 4) return error("#VALUE!");
+    const lookup = scalar(args[0]!);
+    if (isError(lookup)) return lookup;
     const rows = table(args[1]!);
     const index = toNumber(scalar(args[2]!));
     const approximate = args[3] ? toBoolean(scalar(args[3])) : bool(true);
@@ -80,7 +84,7 @@ function evaluateLookup(name: string, args: readonly Value[]): Value {
     if (ordinal < 1 || ordinal > (name === "HLOOKUP" ? rows.length : (rows[0]?.length ?? 0)))
       return error("#REF!");
     const candidates = name === "HLOOKUP" ? rows[0]! : rows.map((row) => row[0]!);
-    const position = matchIndex(scalar(args[0]!), candidates, approximate.value ? 1 : 0);
+    const position = matchIndex(lookup, candidates, approximate.value ? 1 : 0);
     if (position < 0) return error("#N/A");
     return name === "HLOOKUP" ? rows[ordinal - 1]![position]! : rows[position]![ordinal - 1]!;
   }
