@@ -1,0 +1,41 @@
+{
+  "name": "effect-formula",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Effect-native spreadsheet-style formula engine",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "SPEC.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.20.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "format": "biome format --write src test package.json",
+    "lint": "biome check src test package.json",
+    "check": "pnpm typecheck && pnpm test && pnpm lint && pnpm build"
+  },
+  "peerDependencies": {
+    "effect": "^3.22.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/node": "22.15.30",
+    "effect": "3.22.2",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

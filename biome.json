@@ -1,0 +1,1 @@
+{"formatter":{"indentStyle":"space","lineWidth":100},"linter":{"enabled":true,"rules":{"recommended":true,"style":{"noNonNullAssertion":"off"},"complexity":{"noExcessiveCognitiveComplexity":"off"}}},"assist":{"actions":{"source":{"organizeImports":"on"}}}}
