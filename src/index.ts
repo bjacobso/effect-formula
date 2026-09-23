@@ -1,5 +1,6 @@
 export * from "./Adapters.js";
 export * from "./Address.js";
+export * from "./Analysis.js";
 export * from "./Engine.js";
 export * from "./Parser.js";
 export * from "./Session.js";

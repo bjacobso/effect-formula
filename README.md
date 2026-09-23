@@ -36,6 +36,30 @@ console.log(await Effect.runPromise(session.get("field:total")))
 
 For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
 
+### Inspect formula inputs
+
+`parse` returns an AST through Effect. `formulaInputs` walks that AST and returns the canonical keys a formula may read. It expands ranges into cells and includes references in every conditional branch.
+
+```ts
+import { Effect, Schema } from "effect"
+import { formulaInputSchema, formulaInputs, parse } from "effect-formula"
+
+const ast = await Effect.runPromise(parse("=[price]*[quantity]"))
+const inputs = await Effect.runPromise(formulaInputs(ast))
+// ["field:price", "field:quantity"]
+
+const schema = await Effect.runPromise(formulaInputSchema(ast, {
+  "field:price": Schema.Number,
+  "field:quantity": Schema.Number,
+}))
+const values = await Effect.runPromise(Schema.decodeUnknown(schema)({
+  "field:price": 12,
+  "field:quantity": 3,
+}))
+```
+
+The host supplies a schema for every referenced key. Formula syntax alone cannot guarantee a reference's type: operators coerce values, branches may be conditional, and registered functions have no declared signatures. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
+
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 
 Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains cell keys, while `None` means the address is invalid or exceeds the configured range limit. Formula evaluation still returns tagged formula values, including errors; operational failures stay in Effect's error channel. Optional configuration fields remain ordinary TypeScript optional inputs.
