@@ -21,14 +21,11 @@ function dateSerial(value: Scalar, origin: number): Option.Option<number> {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const stamp = Date.UTC(
-    year,
-    month - 1,
-    day,
-    Number(match[4] ?? 0),
-    Number(match[5] ?? 0),
-    Number(match[6] ?? 0),
-  );
+  const hour = Number(match[4] ?? 0);
+  const minute = Number(match[5] ?? 0);
+  const second = Number(match[6] ?? 0);
+  if (hour >= 24 || minute >= 60 || second >= 60) return Option.none();
+  const stamp = Date.UTC(year, month - 1, day, hour, minute, second);
   const check = new Date(stamp);
   if (
     check.getUTCFullYear() !== year ||

@@ -1328,6 +1328,24 @@
       }
     },
     {
+      "id": "function.DAY",
+      "name": "ISO datetime text supplies its date",
+      "formula": "=DAY(\"2024-01-02 10:30:00\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.DAY",
+      "name": "leap day at latest valid time",
+      "formula": "=DAY(\"2024-02-29 23:59:59\")",
+      "expected": { "_tag": "Number", "value": 29 }
+    },
+    {
+      "id": "function.DAY",
+      "name": "invalid datetime minute is rejected",
+      "formula": "=DAY(\"2024-01-02 10:99:00\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
       "id": "function.MONTH",
       "name": "representative month",
       "formula": "=MONTH(43831)",
@@ -1383,6 +1401,24 @@
         "_tag": "Number",
         "value": 12
       }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "ISO datetime text supplies its hour",
+      "formula": "=HOUR(\"2024-01-02 10:30:00\")",
+      "expected": { "_tag": "Number", "value": 10 }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "invalid datetime second is rejected",
+      "formula": "=HOUR(\"2024-01-02 10:30:99\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "invalid datetime hour is rejected",
+      "formula": "=HOUR(\"2024-01-02 24:00:00\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
       "id": "function.HOUR",

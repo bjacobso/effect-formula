@@ -50,6 +50,8 @@ Numeric aggregates convert direct Logical and numeric Text arguments, while refe
 
 `VALUE` implements OpenFormula's required invariant numbers, en-US numeric grouping and currency, mixed fractions, times, ISO dates and datetimes, and common en-US dates. Text-to-Number conversion elsewhere uses the narrower invariant decimal grammar. Dates use the configured epoch and UTC arithmetic; two-digit en-US years use a 1930–2029 window. Other locales and date formats remain to do. `0^0` and `POWER(0;0)` return `#NUM!` per the power constraint.
 
+ISO date-time text accepted by date and time functions validates hour, minute, and second ranges before conversion; out-of-range fields return `#VALUE!`.
+
 ## 5. Evaluation and Effect API
 
 The first-slice API is implemented. `parseSync` is also available for pure parsing.
