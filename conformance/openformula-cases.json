@@ -1170,6 +1170,54 @@
       "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
+      "id": "function.INDEX",
+      "name": "omitted column returns an entire row",
+      "formula": "=INDEX([.A1:.B3];2;)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Range",
+        "rows": [[{ "_tag": "Number", "value": 2 }, { "_tag": "Number", "value": 20 }]]
+      }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "omitted row returns an entire column",
+      "formula": "=INDEX([.A1:.B3];;2)",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Range",
+        "rows": [
+          [{ "_tag": "Number", "value": 10 }],
+          [{ "_tag": "Number", "value": 20 }],
+          [{ "_tag": "Number", "value": 30 }]
+        ]
+      }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "omitted coordinates return a single cell area",
+      "formula": "=INDEX([.A2])",
+      "preset": "lookup",
+      "expected": {
+        "_tag": "Range",
+        "rows": [[{ "_tag": "Number", "value": 2 }]]
+      }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "explicit coordinates select a scalar from a single cell area",
+      "formula": "=INDEX([.A2];1;1)",
+      "preset": "lookup",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "out of bounds row returns an error",
+      "formula": "=INDEX([.A1:.B3];4;1)",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#REF!" }
+    },
+    {
       "id": "function.MATCH",
       "name": "exact reference lookup",
       "formula": "=MATCH(2;[.A1:.A3];0)",
@@ -1251,6 +1299,13 @@
     },
     {
       "id": "function.MATCH",
+      "name": "entire area returned by INDEX is a search region",
+      "formula": "=MATCH(2;INDEX([.A2]);0)",
+      "preset": "lookup",
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.MATCH",
       "name": "scalar literal is not a search region",
       "formula": "=MATCH(2;2;0)",
       "expected": { "_tag": "Error", "code": "#VALUE!" }
@@ -1286,6 +1341,34 @@
       "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
+      "id": "function.VLOOKUP",
+      "name": "exact match takes first duplicate",
+      "formula": "=VLOOKUP(2;[.A1:.B3];2;FALSE())",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 2 },
+        "cell:B1": { "_tag": "Number", "value": 10 },
+        "cell:A2": { "_tag": "Number", "value": 2 },
+        "cell:B2": { "_tag": "Number", "value": 20 },
+        "cell:A3": { "_tag": "Number", "value": 3 },
+        "cell:B3": { "_tag": "Number", "value": 30 }
+      },
+      "expected": { "_tag": "Number", "value": 10 }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "approximate match takes last duplicate",
+      "formula": "=VLOOKUP(2.5;[.A1:.B3];2)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 10 },
+        "cell:A2": { "_tag": "Number", "value": 2 },
+        "cell:B2": { "_tag": "Number", "value": 20 },
+        "cell:A3": { "_tag": "Number", "value": 2 },
+        "cell:B3": { "_tag": "Number", "value": 30 }
+      },
+      "expected": { "_tag": "Number", "value": 30 }
+    },
+    {
       "id": "function.HLOOKUP",
       "name": "exact reference lookup",
       "formula": "=HLOOKUP(2;[.A1:.C2];2;FALSE())",
@@ -1307,6 +1390,20 @@
       "name": "scalar literal is not a data source",
       "formula": "=HLOOKUP(2;2;1;FALSE())",
       "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "approximate match takes last duplicate",
+      "formula": "=HLOOKUP(2.5;[.A1:.C2];2)",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 2 },
+        "cell:C1": { "_tag": "Number", "value": 2 },
+        "cell:A2": { "_tag": "Number", "value": 10 },
+        "cell:B2": { "_tag": "Number", "value": 20 },
+        "cell:C2": { "_tag": "Number", "value": 30 }
+      },
+      "expected": { "_tag": "Number", "value": 30 }
     },
     {
       "id": "function.DAVERAGE",

@@ -53,7 +53,7 @@ function evaluateLookup(name: string, args: readonly Value[]): Value {
     const r = Math.trunc(row.value);
     const c = Math.trunc(col.value);
     if (r > rows.length || c > (rows[0]?.length ?? 0)) return error("#REF!");
-    if (r === 0 && c === 0) return args[0]!;
+    if (r === 0 && c === 0) return range(rows);
     if (r === 0) return range(rows.map((entry) => [entry[c - 1]!]));
     if (c === 0) return range([rows[r - 1]!]);
     return rows[r - 1]![c - 1]!;
