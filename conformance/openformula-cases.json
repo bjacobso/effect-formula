@@ -447,6 +447,76 @@
       }
     },
     {
+      "id": "function.COUNT",
+      "name": "direct logical and numeric text are converted",
+      "formula": "=COUNT(TRUE();\"2\";FALSE())",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.COUNT",
+      "name": "direct error is ignored",
+      "formula": "=COUNT(1/0;7)",
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.COUNT",
+      "name": "logical single cell reference is ignored",
+      "formula": "=COUNT([.A1];4)",
+      "bindings": { "cell:A1": { "_tag": "Boolean", "value": true } },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.COUNT",
+      "name": "numeric text single cell reference is ignored",
+      "formula": "=COUNT([.A1];4)",
+      "bindings": { "cell:A1": { "_tag": "Text", "value": "2" } },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.SUM",
+      "name": "direct values convert but referenced logical is ignored",
+      "formula": "=SUM(TRUE();\"2\";[.A1];3)",
+      "bindings": { "cell:A1": { "_tag": "Boolean", "value": true } },
+      "expected": { "_tag": "Number", "value": 6 }
+    },
+    {
+      "id": "function.PRODUCT",
+      "name": "direct logical converts but referenced logical is ignored",
+      "formula": "=PRODUCT(TRUE();2;[.A1])",
+      "bindings": { "cell:A1": { "_tag": "Boolean", "value": false } },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.AVERAGE",
+      "name": "numeric single cell reference and direct logical",
+      "formula": "=AVERAGE([.A1];TRUE())",
+      "bindings": { "cell:A1": { "_tag": "Number", "value": 5 } },
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.VAR",
+      "name": "single cell logical reference is excluded from sample variance",
+      "formula": "=VAR(1;3;[.A1])",
+      "bindings": { "cell:A1": { "_tag": "Boolean", "value": true } },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.COUNTA",
+      "name": "direct error counts as nonblank",
+      "formula": "=COUNTA(1/0;\"\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.COUNTBLANK",
+      "name": "empty text cell is not blank",
+      "formula": "=COUNTBLANK([.A1:.A2])",
+      "bindings": {
+        "cell:A1": { "_tag": "Text", "value": "" },
+        "cell:A2": { "_tag": "Blank" }
+      },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
       "id": "syntax.functions",
       "name": "empty selected IF branch",
       "formula": "=IF(TRUE();;2)",

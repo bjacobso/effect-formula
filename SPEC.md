@@ -44,6 +44,8 @@ Equality compares like types, with case-insensitive text comparison; different t
 
 `AND` and `OR` accept direct logical or numeric arguments. Range arguments use the OpenFormula NumberSequence behavior: Number and Error cells participate; Blank, Text, and distinct Boolean cells are skipped. An Error cell propagates. Their full function sections remain sampled pending broader argument and array-context audits.
 
+Numeric aggregates convert direct Logical and numeric Text arguments, while references contribute only Number cells (and Error cells where the function propagates errors). `COUNT` ignores errors. The current numeric Text conversion accepts invariant decimal syntax; OpenFormula leaves Text-to-Number conversion implementation-defined.
+
 `VALUE` implements OpenFormula's required invariant numbers, en-US numeric grouping and currency, mixed fractions, times, ISO dates and datetimes, and common en-US dates. Text-to-Number conversion elsewhere uses the narrower invariant decimal grammar. Dates use the configured epoch and UTC arithmetic; two-digit en-US years use a 1930–2029 window. Other locales and date formats remain to do. `0^0` and `POWER(0;0)` return `#NUM!` per the power constraint.
 
 ## 5. Evaluation and Effect API

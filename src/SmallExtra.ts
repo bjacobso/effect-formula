@@ -1,21 +1,7 @@
-import { Option } from "effect";
+import { Either, Option } from "effect";
+import { numberSequence } from "./NumberSequence.js";
 import type { Scalar, Value } from "./Value.js";
-import { entries, error, isError, number, scalar, text, toNumber, toText } from "./Value.js";
-
-function numericArguments(args: readonly Value[]): number[] | Scalar {
-  const values: number[] = [];
-  for (const arg of args)
-    for (const value of entries(arg)) {
-      if (isError(value)) return value;
-      if (value._tag === "Number") values.push(value.value);
-      else if (arg._tag !== "Range" && value._tag !== "Blank") {
-        const converted = toNumber(value);
-        if (isError(converted)) return converted;
-        values.push(converted.value);
-      }
-    }
-  return values;
-}
+import { error, isError, number, scalar, text, toNumber, toText } from "./Value.js";
 
 const names = new Set([
   "PRODUCT",
@@ -27,13 +13,24 @@ const names = new Set([
   "REPLACE",
   "SUBSTITUTE",
 ]);
-export function smallExtra(name: string, args: readonly Value[]): Option.Option<Scalar> {
-  return names.has(name) ? Option.some(evaluateExtra(name, args)) : Option.none();
+export function smallExtra(
+  name: string,
+  args: readonly Value[],
+  referenceArguments: readonly boolean[],
+): Option.Option<Scalar> {
+  return names.has(name)
+    ? Option.some(evaluateExtra(name, args, referenceArguments))
+    : Option.none();
 }
-function evaluateExtra(name: string, args: readonly Value[]): Scalar {
+function evaluateExtra(
+  name: string,
+  args: readonly Value[],
+  referenceArguments: readonly boolean[],
+): Scalar {
   if (["PRODUCT", "STDEV", "STDEVP", "VAR", "VARP"].includes(name)) {
-    const values = numericArguments(args);
-    if (!Array.isArray(values)) return values as Scalar;
+    const sequence = numberSequence(args, referenceArguments, "propagate");
+    if (Either.isLeft(sequence)) return sequence.left;
+    const values = sequence.right;
     if (name === "PRODUCT") return number(values.reduce((product, value) => product * value, 1));
     const sample = name === "STDEV" || name === "VAR";
     if (values.length < (sample ? 2 : 1)) return error("#DIV/0!");

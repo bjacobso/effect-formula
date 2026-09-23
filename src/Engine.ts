@@ -1,6 +1,7 @@
-import { Context, Data, Effect, Layer, Option, pipe } from "effect";
+import { Context, Data, Effect, Either, Layer, Option, pipe } from "effect";
 import { addressKey, columnLetters, type GridBounds, parseAddress, sameSheet } from "./Address.js";
 import { matchesCriterion } from "./Criterion.js";
+import { numberSequence } from "./NumberSequence.js";
 import type { Ast } from "./Parser.js";
 import { smallDatabase } from "./SmallDatabase.js";
 import { type DateOptions, smallDate } from "./SmallDate.js";
@@ -235,25 +236,29 @@ function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
       return error("#VALUE!");
   }
 }
-function aggregate(name: string, args: readonly Value[]): Scalar {
-  const values = args.flatMap(entries);
-  if (name === "COUNT") return number(values.filter((value) => value._tag === "Number").length);
-  if (name === "COUNTA") return number(values.filter((value) => value._tag !== "Blank").length);
-  if (name === "COUNTBLANK") return number(values.filter((value) => value._tag === "Blank").length);
-  const failed = values.find(isError);
-  if (failed) return failed;
-  const numbers: number[] = [];
-  for (const arg of args) {
-    for (const value of entries(arg)) {
-      if (value._tag === "Number") numbers.push(value.value);
-      else if (arg._tag !== "Range" && value._tag !== "Blank") {
-        const converted = toNumber(value);
-        if (isError(converted)) return converted;
-        numbers.push(converted.value);
-      }
-    }
+function aggregate(
+  name: string,
+  args: readonly Value[],
+  referenceArguments: readonly boolean[],
+): Scalar {
+  if (name === "COUNTA" || name === "COUNTBLANK") {
+    const values = args.flatMap(entries);
+    return number(
+      values.filter((value) =>
+        name === "COUNTA" ? value._tag !== "Blank" : value._tag === "Blank",
+      ).length,
+    );
   }
+  const sequence = numberSequence(
+    args,
+    referenceArguments,
+    name === "COUNT" ? "ignore" : "propagate",
+  );
+  if (Either.isLeft(sequence)) return sequence.left;
+  const numbers = sequence.right;
   switch (name) {
+    case "COUNT":
+      return number(numbers.length);
     case "SUM":
       return number(numbers.reduce((a, b) => a + b, 0));
     case "AVERAGE":
@@ -721,12 +726,18 @@ export function evaluate(
               (node.args.length !== 1 || !["Reference", "Range"].includes(node.args[0]?._tag ?? ""))
             )
               return error("#VALUE!");
+            const referenceArguments = node.args.map(
+              (arg) =>
+                arg._tag === "Reference" ||
+                arg._tag === "Range" ||
+                (arg._tag === "Binary" && arg.operator === "!"),
+            );
             if (["SUM", "AVERAGE", "MIN", "MAX", "COUNT", "COUNTA", "COUNTBLANK"].includes(name))
-              return aggregate(name, args);
+              return aggregate(name, args, referenceArguments);
             return Option.getOrElse(
               pipe(
                 builtIn(name, args, options),
-                Option.orElse(() => smallExtra(name, args)),
+                Option.orElse(() => smallExtra(name, args, referenceArguments)),
                 Option.orElse(() => smallDate(name, args, options)),
                 Option.orElse(() => smallFinance(name, args)),
                 Option.orElse(() => smallLookup(name, args)),
