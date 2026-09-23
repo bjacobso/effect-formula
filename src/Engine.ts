@@ -271,6 +271,20 @@ const builtInNames = new Set(
     " ",
   ),
 );
+function shiftDecimal(value: number, places: number): number {
+  if (value === 0) return 0;
+  const [coefficient, exponent = "0"] = value.toString().split("e");
+  return Number(`${coefficient}e${Number(exponent) + places}`);
+}
+function roundDecimal(value: number, places: number, mode: "round" | "truncate"): Scalar {
+  if (places > 1000) return number(value);
+  if (places < -1000) return number(0);
+  const scaled = shiftDecimal(Math.abs(value), places);
+  if (!Number.isFinite(scaled)) return number(value);
+  const rounded = mode === "round" ? Math.round(scaled) : Math.trunc(scaled);
+  if (rounded === 0) return number(0);
+  return number(Math.sign(value) * shiftDecimal(rounded, -places));
+}
 function builtIn(
   name: string,
   args: readonly Value[],
@@ -363,8 +377,7 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       const digits = args[1] ? toNumber(scalar(args[1])) : number(0);
       if (isError(value)) return value;
       if (isError(digits)) return digits;
-      const factor = 10 ** Math.trunc(digits.value);
-      return number((Math.sign(value.value) * Math.round(Math.abs(value.value) * factor)) / factor);
+      return roundDecimal(value.value, Math.trunc(digits.value), "round");
     }
     case "LOG": {
       if (args.length < 1 || args.length > 2) return error("#VALUE!");
@@ -382,8 +395,7 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       const digits = args[1] ? toNumber(scalar(args[1])) : number(0);
       if (isError(value)) return value;
       if (isError(digits)) return digits;
-      const factor = 10 ** Math.trunc(digits.value);
-      return number(Math.trunc(value.value * factor) / factor);
+      return roundDecimal(value.value, Math.trunc(digits.value), "truncate");
     }
     case "LEN":
     case "LOWER":

@@ -162,6 +162,18 @@
       }
     },
     {
+      "id": "function.MOD",
+      "name": "negative divisor gives negative remainder",
+      "formula": "=MOD(3;-2)",
+      "expected": { "_tag": "Number", "value": -1 }
+    },
+    {
+      "id": "function.MOD",
+      "name": "zero divisor returns an error",
+      "formula": "=MOD(3;0)",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
       "id": "function.INT",
       "name": "floor negative number",
       "formula": "=INT(-2.3)",
@@ -178,6 +190,54 @@
         "_tag": "Number",
         "value": -3
       }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "decimal half tie rounds away from zero",
+      "formula": "=ROUND(1.005;2)",
+      "expected": { "_tag": "Number", "value": 1.01 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "negative decimal half tie rounds away from zero",
+      "formula": "=ROUND(-1.005;2)",
+      "expected": { "_tag": "Number", "value": -1.01 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "negative digits round to tens",
+      "formula": "=ROUND(-125;-1)",
+      "expected": { "_tag": "Number", "value": -130 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "large positive digit count preserves representable value",
+      "formula": "=ROUND(1.25;309)",
+      "expected": { "_tag": "Number", "value": 1.25 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "large positive digit count can still round a subnormal to zero",
+      "formula": "=ROUND(1e-320;309)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "large negative digit count rounds to zero",
+      "formula": "=ROUND(1.25;-400)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "extreme positive digit count preserves value",
+      "formula": "=ROUND(1.25;1e21)",
+      "expected": { "_tag": "Number", "value": 1.25 }
+    },
+    {
+      "id": "function.ROUND",
+      "name": "extreme negative digit count rounds to zero",
+      "formula": "=ROUND(1.25;-1e21)",
+      "expected": { "_tag": "Number", "value": 0 }
     },
     {
       "id": "function.COUNTA",
@@ -605,6 +665,18 @@
       }
     },
     {
+      "id": "function.FACT",
+      "name": "zero factorial is one",
+      "formula": "=FACT(0)",
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.FACT",
+      "name": "negative integer is outside domain",
+      "formula": "=FACT(-1)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
       "id": "function.LOG",
       "name": "custom base",
       "formula": "=LOG(8;2)",
@@ -621,6 +693,30 @@
         "_tag": "Number",
         "value": -2
       }
+    },
+    {
+      "id": "function.TRUNC",
+      "name": "truncate a negative decimal",
+      "formula": "=TRUNC(-123.45;1)",
+      "expected": { "_tag": "Number", "value": -123.4 }
+    },
+    {
+      "id": "function.TRUNC",
+      "name": "negative digit count truncates hundreds",
+      "formula": "=TRUNC(12345;-2)",
+      "expected": { "_tag": "Number", "value": 12300 }
+    },
+    {
+      "id": "function.TRUNC",
+      "name": "large positive digit count preserves representable value",
+      "formula": "=TRUNC(1.25;309)",
+      "expected": { "_tag": "Number", "value": 1.25 }
+    },
+    {
+      "id": "function.TRUNC",
+      "name": "large negative digit count truncates to zero",
+      "formula": "=TRUNC(-1.25;-400)",
+      "expected": { "_tag": "Number", "value": 0 }
     },
     {
       "id": "function.LEN",
