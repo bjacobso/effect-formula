@@ -8,6 +8,7 @@ import { type DateOptions, smallDate } from "./SmallDate.js";
 import { smallExtra } from "./SmallExtra.js";
 import { smallFinance } from "./SmallFinance.js";
 import { smallLookup } from "./SmallLookup.js";
+import { average } from "./Statistics.js";
 import type { Scalar, Value } from "./Value.js";
 import {
   blank,
@@ -262,9 +263,7 @@ function aggregate(
     case "SUM":
       return number(numbers.reduce((a, b) => a + b, 0));
     case "AVERAGE":
-      return numbers.length
-        ? number(numbers.reduce((a, b) => a + b, 0) / numbers.length)
-        : error("#DIV/0!");
+      return numbers.length ? number(average(numbers)) : error("#DIV/0!");
     case "MIN":
       return number(numbers.length ? Math.min(...numbers) : 0);
     default:

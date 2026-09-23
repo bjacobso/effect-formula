@@ -1179,6 +1179,18 @@
       }
     },
     {
+      "id": "function.STDEV",
+      "name": "equal large numbers have zero sample deviation",
+      "formula": "=STDEV(1e308;1e308)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.STDEV",
+      "name": "large opposite values have finite sample deviation",
+      "formula": "=STDEV(1e308;-1e308)",
+      "expected": { "_tag": "Number", "value": 1.4142135623730951e308 }
+    },
+    {
       "id": "function.STDEVP",
       "name": "representative stdevp",
       "formula": "=STDEVP(1;3)",
@@ -1186,6 +1198,18 @@
         "_tag": "Number",
         "value": 1
       }
+    },
+    {
+      "id": "function.STDEVP",
+      "name": "large opposite values have finite population deviation",
+      "formula": "=STDEVP(1e308;-1e308)",
+      "expected": { "_tag": "Number", "value": 1e308 }
+    },
+    {
+      "id": "function.STDEVP",
+      "name": "tiny opposite values have finite population deviation",
+      "formula": "=STDEVP(1e-200;-1e-200)",
+      "expected": { "_tag": "Number", "value": 1e-200 }
     },
     {
       "id": "function.VAR",
@@ -1197,6 +1221,18 @@
       }
     },
     {
+      "id": "function.VAR",
+      "name": "equal large numbers have zero sample variance",
+      "formula": "=VAR(1e308;1e308)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.VAR",
+      "name": "nearby large numbers retain their spread",
+      "formula": "=VAR(1e16;10000000000000002)",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
       "id": "function.VARP",
       "name": "representative varp",
       "formula": "=VARP(1;3)",
@@ -1204,6 +1240,12 @@
         "_tag": "Number",
         "value": 1
       }
+    },
+    {
+      "id": "function.VARP",
+      "name": "equal large numbers have zero population variance",
+      "formula": "=VARP(1e308;1e308)",
+      "expected": { "_tag": "Number", "value": 0 }
     },
     {
       "id": "function.DATE",
@@ -2112,6 +2154,18 @@
         "_tag": "Number",
         "value": 2
       }
+    },
+    {
+      "id": "function.AVERAGE",
+      "name": "large finite values have a finite average",
+      "formula": "=AVERAGE(1e308;1e308)",
+      "expected": { "_tag": "Number", "value": 1e308 }
+    },
+    {
+      "id": "function.AVERAGE",
+      "name": "large opposite values cancel",
+      "formula": "=AVERAGE(1e308;-1e308)",
+      "expected": { "_tag": "Number", "value": 0 }
     },
     {
       "id": "function.ISERR",

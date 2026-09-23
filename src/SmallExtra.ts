@@ -1,5 +1,6 @@
 import { Either, Option } from "effect";
 import { numberSequence } from "./NumberSequence.js";
+import { dispersion } from "./Statistics.js";
 import type { Scalar, Value } from "./Value.js";
 import { error, isError, number, scalar, text, toNumber, toText } from "./Value.js";
 
@@ -34,11 +35,7 @@ function evaluateExtra(
     if (name === "PRODUCT") return number(values.reduce((product, value) => product * value, 1));
     const sample = name === "STDEV" || name === "VAR";
     if (values.length < (sample ? 2 : 1)) return error("#DIV/0!");
-    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-    const variance =
-      values.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
-      (values.length - (sample ? 1 : 0));
-    return number(name.startsWith("STDEV") ? Math.sqrt(variance) : variance);
+    return number(dispersion(values, sample, name.startsWith("STDEV")));
   }
   if (name === "PROPER") {
     if (args.length !== 1) return error("#VALUE!");
