@@ -1085,6 +1085,27 @@
       }
     },
     {
+      "id": "function.TIME",
+      "name": "hours may exceed one day",
+      "formula": "=TIME(25;0;0)",
+      "expected": { "_tag": "Number", "value": 1.0416666666666667 },
+      "tolerance": 1e-15
+    },
+    {
+      "id": "function.TIME",
+      "name": "negative components are permitted",
+      "formula": "=TIME(-1;0;0)",
+      "expected": { "_tag": "Number", "value": -0.041666666666666664 },
+      "tolerance": 1e-15
+    },
+    {
+      "id": "function.TIME",
+      "name": "negative fractional component uses INT",
+      "formula": "=TIME(-0.5;0;0)",
+      "expected": { "_tag": "Number", "value": -0.041666666666666664 },
+      "tolerance": 1e-15
+    },
+    {
       "id": "function.HOUR",
       "name": "representative hour",
       "formula": "=HOUR(0.5)",
@@ -1092,6 +1113,18 @@
         "_tag": "Number",
         "value": 12
       }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "exact hour round trips through TIME",
+      "formula": "=HOUR(TIME(2;0;0))",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.HOUR",
+      "name": "negative time uses positive day fraction",
+      "formula": "=HOUR(TIME(-1;0;0))",
+      "expected": { "_tag": "Number", "value": 23 }
     },
     {
       "id": "function.MINUTE",
@@ -1103,6 +1136,18 @@
       }
     },
     {
+      "id": "function.MINUTE",
+      "name": "exact minute round trips through TIME",
+      "formula": "=MINUTE(TIME(0;2;0))",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.MINUTE",
+      "name": "later exact minute round trips through TIME",
+      "formula": "=MINUTE(TIME(1;13;0))",
+      "expected": { "_tag": "Number", "value": 13 }
+    },
+    {
       "id": "function.SECOND",
       "name": "representative second",
       "formula": "=SECOND(0.5)",
@@ -1110,6 +1155,12 @@
         "_tag": "Number",
         "value": 0
       }
+    },
+    {
+      "id": "function.SECOND",
+      "name": "seconds may exceed sixty in TIME",
+      "formula": "=SECOND(TIME(0;0;61))",
+      "expected": { "_tag": "Number", "value": 1 }
     },
     {
       "id": "function.WEEKDAY",

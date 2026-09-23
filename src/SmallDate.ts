@@ -85,7 +85,9 @@ function evaluateDate(name: string, args: readonly Value[], options: DateOptions
     const parts = args.map((arg) => toNumber(scalar(arg)));
     const failure = parts.find(isError);
     if (failure) return failure;
-    const [a, b, c] = parts.map((part) => Math.trunc((part as { value: number }).value));
+    const [a, b, c] = parts.map((part) =>
+      (name === "TIME" ? Math.floor : Math.trunc)((part as { value: number }).value),
+    );
     if (name === "TIME") return number((a! * 3600 + b! * 60 + c!) / 86400);
     if (a! < 1904 || a! > 9956 || b! < 1 || c! < 1) return error("#VALUE!");
     return number((Date.UTC(a!, b! - 1, c!) - origin) / dayMilliseconds);
@@ -100,8 +102,8 @@ function evaluateDate(name: string, args: readonly Value[], options: DateOptions
       : dateSerial(value, origin);
   if (Option.isNone(serial)) return error("#VALUE!");
   const day = serial.value;
-  if (name === "HOUR") return number(Math.floor((((day % 1) + 1) % 1) * 24));
-  if (name === "MINUTE") return number(Math.floor(((((day % 1) + 1) % 1) * 1440) % 60));
+  if (name === "HOUR") return number(Math.floor((day - Math.floor(day)) * 24));
+  if (name === "MINUTE") return number(((Math.floor(Math.round(day * 86400) / 60) % 60) + 60) % 60);
   if (name === "SECOND") return number(((Math.round(day * 86400) % 60) + 60) % 60);
   const date = new Date(origin + Math.floor(day) * dayMilliseconds);
   if (name === "YEAR") return number(date.getUTCFullYear());
