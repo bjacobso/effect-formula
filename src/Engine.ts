@@ -748,7 +748,7 @@ export function evaluate(
                 builtIn(name, args, options),
                 Option.orElse(() => smallExtra(name, args, referenceArguments)),
                 Option.orElse(() => smallDate(name, args, options)),
-                Option.orElse(() => smallFinance(name, args)),
+                Option.orElse(() => smallFinance(name, args, referenceArguments)),
                 Option.orElse(() => smallLookup(name, args)),
                 Option.orElse(() => smallDatabase(name, args)),
               ),

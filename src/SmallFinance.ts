@@ -1,6 +1,7 @@
-import { Option } from "effect";
+import { Either, Option } from "effect";
+import { numberSequence } from "./NumberSequence.js";
 import type { Scalar, Value } from "./Value.js";
-import { entries, error, isError, number, scalar, toNumber } from "./Value.js";
+import { error, isError, number, scalar, toNumber } from "./Value.js";
 
 function parameters(args: readonly Value[], min: number, max: number): number[] | Scalar {
   if (args.length < min || args.length > max) return error("#VALUE!");
@@ -39,41 +40,41 @@ function solve(fn: (rate: number) => number, guess: number): Scalar {
   }
   return error("#NUM!");
 }
-function sequence(args: readonly Value[]): number[] | Scalar {
-  const values: number[] = [];
-  for (const arg of args)
-    for (const entry of entries(arg)) {
-      if (isError(entry)) return entry;
-      if (entry._tag === "Number") values.push(entry.value);
-    }
-  return values;
-}
-
 const names = new Set(["NPV", "IRR", "SLN", "SYD", "DDB", "FV", "NPER", "PMT", "PV", "RATE"]);
-export function smallFinance(name: string, args: readonly Value[]): Option.Option<Scalar> {
-  return names.has(name) ? Option.some(evaluateFinance(name, args)) : Option.none();
+export function smallFinance(
+  name: string,
+  args: readonly Value[],
+  referenceArguments: readonly boolean[],
+): Option.Option<Scalar> {
+  return names.has(name)
+    ? Option.some(evaluateFinance(name, args, referenceArguments))
+    : Option.none();
 }
-function evaluateFinance(name: string, args: readonly Value[]): Scalar {
+function evaluateFinance(
+  name: string,
+  args: readonly Value[],
+  referenceArguments: readonly boolean[],
+): Scalar {
   if (name === "NPV") {
     if (args.length < 2) return error("#VALUE!");
     const rate = toNumber(scalar(args[0]!));
     if (isError(rate)) return rate;
-    const values = sequence(args.slice(1));
-    if (!Array.isArray(values)) return values as Scalar;
+    const values = numberSequence(args.slice(1), referenceArguments.slice(1), "propagate");
+    if (Either.isLeft(values)) return values.left;
     return number(
-      values.reduce((sum, value, index) => sum + value / (1 + rate.value) ** (index + 1), 0),
+      values.right.reduce((sum, value, index) => sum + value / (1 + rate.value) ** (index + 1), 0),
     );
   }
   if (name === "IRR") {
     if (args.length < 1 || args.length > 2) return error("#VALUE!");
-    const values = sequence([args[0]!]);
-    if (!Array.isArray(values)) return values as Scalar;
-    if (!values.some((value) => value > 0) || !values.some((value) => value < 0))
+    const values = numberSequence(args.slice(0, 1), referenceArguments.slice(0, 1), "propagate");
+    if (Either.isLeft(values)) return values.left;
+    if (!values.right.some((value) => value > 0) || !values.right.some((value) => value < 0))
       return error("#NUM!");
     const guess = args[1] ? toNumber(scalar(args[1])) : number(0.1);
     if (isError(guess)) return guess;
     return solve(
-      (rate) => values.reduce((sum, value, index) => sum + value / (1 + rate) ** index, 0),
+      (rate) => values.right.reduce((sum, value, index) => sum + value / (1 + rate) ** index, 0),
       guess.value,
     );
   }

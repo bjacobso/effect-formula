@@ -1532,6 +1532,28 @@
       }
     },
     {
+      "id": "function.NPV",
+      "name": "direct logical and numeric text cash flows",
+      "formula": "=NPV(0;TRUE();\"2\";3)",
+      "expected": { "_tag": "Number", "value": 6 }
+    },
+    {
+      "id": "function.NPV",
+      "name": "invalid direct text cash flow",
+      "formula": "=NPV(0;\"bad\";3)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.NPV",
+      "name": "referenced logical and text cash flows do not consume periods",
+      "formula": "=NPV(1;[.A1];[.B1];8)",
+      "bindings": {
+        "cell:A1": { "_tag": "Boolean", "value": true },
+        "cell:B1": { "_tag": "Text", "value": "2" }
+      },
+      "expected": { "_tag": "Number", "value": 4 }
+    },
+    {
       "id": "function.PMT",
       "name": "representative pmt",
       "formula": "=PMT(0;2;20)",
@@ -1587,6 +1609,12 @@
         "_tag": "Number",
         "value": 0
       }
+    },
+    {
+      "id": "function.IRR",
+      "name": "invalid direct text cash flow",
+      "formula": "=IRR(\"bad\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
       "id": "function.INDEX",

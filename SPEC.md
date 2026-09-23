@@ -46,6 +46,8 @@ Equality compares like types, with case-insensitive text comparison; different t
 
 Numeric aggregates convert direct Logical and numeric Text arguments, while references contribute only Number cells (and Error cells where the function propagates errors). `COUNT` ignores errors. The current numeric Text conversion accepts invariant decimal syntax; OpenFormula leaves Text-to-Number conversion implementation-defined.
 
+`NPV` and `IRR` use the same NumberSequence conversion: direct Logical and numeric Text cash flows convert to Number, while referenced Logical and Text cells are skipped without consuming a cash-flow period. Invalid direct Text returns `#VALUE!` under the engine's invariant decimal conversion policy.
+
 `AVERAGE`, `STDEV`, `STDEVP`, `VAR`, and `VARP` scale intermediate calculations so representable results can survive large or tiny finite inputs. Results outside the finite Number domain return `#NUM!`.
 
 `VALUE` implements OpenFormula's required invariant numbers, en-US numeric grouping and currency, mixed fractions, times, ISO dates and datetimes, and common en-US dates. Text-to-Number conversion elsewhere uses the narrower invariant decimal grammar. Dates use the configured epoch and UTC arithmetic; two-digit en-US years use a 1930–2029 window. Other locales and date formats remain to do. `0^0` and `POWER(0;0)` return `#NUM!` per the power constraint.
