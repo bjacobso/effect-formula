@@ -8,7 +8,9 @@
   "files": [
     "dist",
     "README.md",
-    "SPEC.md"
+    "SPEC.md",
+    "COMPATIBILITY.md",
+    "conformance"
   ],
   "exports": {
     ".": {
@@ -24,6 +26,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "conformance": "vitest run test/conformance.test.ts",
     "format": "biome format --write src test package.json",
     "lint": "biome check src test package.json",
     "check": "pnpm typecheck && pnpm test && pnpm lint && pnpm build"

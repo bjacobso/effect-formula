@@ -51,7 +51,8 @@ function cell(key: string): { col: number; row: number } | undefined {
   if (!match) return undefined;
   let col = 0;
   for (const letter of match[1]!) col = col * 26 + letter.charCodeAt(0) - 64;
-  return { col, row: Number(match[2]) };
+  const row = Number(match[2]);
+  return Number.isSafeInteger(col) && Number.isSafeInteger(row) ? { col, row } : undefined;
 }
 function keyOf(col: number, row: number): string {
   let name = "";

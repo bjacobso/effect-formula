@@ -36,6 +36,29 @@ console.log(await Effect.runPromise(session.get("field:total")))
 
 For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
 
+### Host adapters
+
+`spreadsheet()` and `form(fields)` provide small host APIs over the same session:
+
+```ts
+import { Effect } from "effect"
+import { form, number, spreadsheet } from "effect-formula"
+
+const sheet = await Effect.runPromise(spreadsheet())
+await Effect.runPromise(sheet.set({ A1: number(2), B1: { formula: "=A1*3" } }))
+console.log(await Effect.runPromise(sheet.get("B1"))) // Number 6
+
+const builder = await Effect.runPromise(form(["price", "quantity", "total"]))
+await Effect.runPromise(builder.set({
+  price: number(12),
+  quantity: number(3),
+  total: { formula: "=[price]*[quantity]" },
+}))
+console.log(await Effect.runPromise(builder.get("total"))) // Number 36
+```
+
+Inputs use tagged formula values. A `{ formula: "=..." }` entry is calculated; `null` clears an entry. Spreadsheet addresses are case insensitive and empty cells are blank. Form field names are case sensitive; declared empty fields are blank and unknown fields return `#REF!`. Each `set` call is one atomic batch and returns changed values keyed by host names.
+
 ## Standards and compatibility
 
 [OpenFormula, ODF 1.4 Part 4](https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html) is the primary public specification for formula types, syntax, operators, functions, and evaluator conformance groups. Its Small, Medium, and Large groups are useful targets, but this project must pass every requirement in a group before claiming conformance. The initial milestone is a documented subset, **not** an OpenFormula conforming evaluator.
@@ -59,4 +82,4 @@ The public API exposes parsing, one-shot evaluation, and a stateful calculation 
 
 ## Status
 
-The parser, evaluator, range and field references, custom functions, and recalculation session are implemented. See [COMPATIBILITY.md](COMPATIBILITY.md) for the precise supported subset and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.
+The parser, evaluator, range and field references, custom functions, recalculation session, and host adapters are implemented. [conformance/rules.json](conformance/rules.json) records checked and unsupported rules; run `pnpm conformance` to execute its cases. See [COMPATIBILITY.md](COMPATIBILITY.md) for the precise supported subset and [PLAN.md](PLAN.md) for expansion work. No conformance group is claimed.

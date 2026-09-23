@@ -28,21 +28,31 @@ The public result is a tagged value: `Blank`, `Number`, `Text`, `Boolean`, `Erro
 
 Error values include at least `#DIV/0!`, `#VALUE!`, `#REF!`, `#NAME?`, `#NUM!`, and `#CYCLE!` (the last is a project extension). Formula errors propagate through calculations unless a function specifies handling. Host resolution failures, malformed input payloads, cancellation, and unexpected function defects are typed Effect failures; they are never silently converted to a blank or a formula error. Explicit host configuration may map a missing reference to `#REF!`.
 
-Conversions are centralized and tested by context: arithmetic, comparison, concatenation, direct argument, and range aggregate. The first milestone records a truth table for blank, number, text, and boolean in each context before claiming standard compatibility. No implicit `Number(...)` or JavaScript truthiness may define semantics accidentally.
+Conversions are centralized. The current first-slice rules are:
+
+| Context | Blank | Number | Text | Boolean | Error |
+| --- | --- | --- | --- | --- | --- |
+| Arithmetic | `0` | unchanged | finite numeric text converts; other text gives `#VALUE!` | `0` or `1` | propagates |
+| Logical argument | `FALSE` | zero is `FALSE`; nonzero is `TRUE` | `#VALUE!` | unchanged | propagates |
+| Concatenation | empty text | decimal text | unchanged | `TRUE` or `FALSE` | propagates |
+| Direct aggregate argument | ignored | included | finite numeric text included; other text gives `#VALUE!` | included as `0` or `1` | propagates |
+| Range aggregate entry | ignored | included | ignored | ignored | propagates |
+
+Comparisons use numeric ordering when both inputs are Numbers. Otherwise both are converted to text and compared without case sensitivity. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type comparison rules need further audit.
 
 ## 5. Evaluation and Effect API
 
 The first-slice API is implemented. `parseSync` is also available for pure parsing.
 
 ```ts
-parse(formula: string, options: ParseOptions): Effect.Effect<Ast, ParseError>
-evaluate(ast: Ast, options?: EvalOptions): Effect.Effect<FormulaValue, EvaluationFailure, FormulaEnvironment>
-createSession(options: SessionOptions): Effect.Effect<FormulaSession, never, FormulaEnvironment>
+parse(formula: string, options?: ParseOptions): Effect.Effect<Ast, ParseError>
+evaluate(ast: Ast, options?: EvalOptions): Effect.Effect<Value, ResolutionFailure | EvaluationFailure, ReferenceResolver | FunctionRegistry>
+createSession(options?: SessionOptions): Effect.Effect<FormulaSession, never, ReferenceResolver | FunctionRegistry>
 ```
 
 `FormulaEnvironment` supplies a reference resolver and function registry through Effect services/layers. Parsing also exposes the synchronous `parseSync`. Evaluation uses Effect so a resolver or custom function can be synchronous or asynchronous and can be cancelled. Session input values are validated with Effect Schema; resolver and custom-function outputs currently rely on their TypeScript contracts. Pure arithmetic inside the evaluator remains plain functions.
 
-The host owns source values and reference identity. A grid adapter maps sheet/cell/range addresses; a form adapter maps field keys and optionally repeated record ranges. The core neither stores UI state nor assumes all references are cells. The host decides how to authorize and scope data exposed to formula resolvers.
+The host owns source values and reference identity. `spreadsheet()` maps A1 cells; `form(fields)` maps declared field keys. Both expose `set`, `get`, and `snapshot` over a calculation session. Unset spreadsheet cells and declared empty form fields are Blank; undeclared form fields give `#REF!`. The core neither stores UI state nor assumes all references are cells. The host decides how to authorize and scope data exposed to formula resolvers. Repeated form records and multiple sheets remain future work.
 
 Built-in functions have explicit arity and evaluation behavior in the evaluator; a metadata registry is future work. `IF` evaluates only the selected branch. Aggregates visit range entries in row-major order. Custom functions may return a formula value or typed Effect failure. The evaluator has configurable limits on expression length, parser nesting, range cells visited, and evaluation steps. Defaults are 10,000 characters, 100 parser levels, 10,000 range cells, and 100,000 evaluation steps.
 
@@ -54,17 +64,17 @@ The session recalculates affected formulas eagerly and serializes update batches
 
 ## 7. First function set
 
-The first slice implements `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`, plus the operators in section 3. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) records the current status. A section-level machine-readable matrix and fuller function edge-case tests remain compatibility work.
+The first slice implements `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, `AND`, `OR`, `NOT`, and `IFERROR`, plus the operators in section 3. `IFERROR` is defined in OpenFormula 1.4 section 6.15.5; field references are a project extension. [COMPATIBILITY.md](COMPATIBILITY.md) summarizes status, and [conformance/rules.json](conformance/rules.json) records checked rule cases and unsupported areas. Fuller function edge-case tests remain compatibility work.
 
 ## 8. Verification and compatibility claims
 
-Each semantic rule gets a table-driven test with source citation, input values, expected result, and dialect. Include parser precedence, escapes, reference resolution, coercion, error propagation, lazy branches, cycles, incremental updates, cancellation, and stale asynchronous results. Use examples from public standards as references while writing original test cases. Differential runs against other engines may help discover mismatches, but their output is diagnostic rather than an oracle.
+Checked semantic rules have table-driven cases with source section, input values, and expected result. The current suite covers parser precedence, escapes, reference resolution, coercion, error propagation, lazy branches, cycles, incremental updates, and an asynchronous update race. Cancellation and full section-level edge cases remain future work. Differential runs against other engines may help discover mismatches, but their output is diagnostic rather than an oracle.
 
 Publish a compatibility matrix with statuses `supported`, `partial`, `unsupported`, and `extension`, plus links to tests. A release may say “supports these OpenFormula features” when proven. It may say “ODF 1.4 OpenFormula Small Group evaluator” only after every requirement in that group passes an explicit audit.
 
 ## 9. Open decisions
 
-1. Confirm the default formula dialect and whether the first public API should accept both `;` and `,` with explicit options.
-2. Choose stable form-field escaping and reference-key encoding.
+1. Define whether an Excel profile should differ beyond the explicit comma argument separator.
+2. Define escaping for `]` in form field keys; the current adapter accepts only `[A-Za-z_][A-Za-z0-9_.-]*` keys.
 3. Select a package license and contribution policy before an installable package release or outside contributions.
 4. Define dates, locale input, cross-sheet references, and Excel profile scope after the scalar milestone.

@@ -1,0 +1,629 @@
+{
+  "standard": "OpenFormula 1.4",
+  "url": "https://docs.oasis-open.org/office/OpenDocument/os/v1.4-os.html",
+  "claim": "Feature-level checks only; no evaluator conformance group is claimed",
+  "rules": [
+    {
+      "id": "syntax.literals",
+      "section": "5.3-5.4",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "number",
+          "formula": "=12.5",
+          "expected": {
+            "_tag": "Number",
+            "value": 12.5
+          }
+        },
+        {
+          "name": "escaped string",
+          "formula": "=\"a\"\"b\"",
+          "expected": {
+            "_tag": "Text",
+            "value": "a\"b"
+          }
+        },
+        {
+          "name": "boolean extension",
+          "formula": "=TRUE",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "syntax.precedence",
+      "section": "5.5",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "multiplication before addition",
+          "formula": "=2+3*4",
+          "expected": {
+            "_tag": "Number",
+            "value": 14
+          }
+        },
+        {
+          "name": "parentheses",
+          "formula": "=(2+3)*4",
+          "expected": {
+            "_tag": "Number",
+            "value": 20
+          }
+        },
+        {
+          "name": "right associative power",
+          "formula": "=2^3^2",
+          "expected": {
+            "_tag": "Number",
+            "value": 512
+          }
+        },
+        {
+          "name": "power before unary minus",
+          "formula": "=-2^2",
+          "expected": {
+            "_tag": "Number",
+            "value": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "syntax.references",
+      "section": "5.8",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "cell",
+          "formula": "=A1",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Number",
+              "value": 4
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 4
+          }
+        },
+        {
+          "name": "absolute spelling",
+          "formula": "=$A$1",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Number",
+              "value": 4
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 4
+          }
+        },
+        {
+          "name": "rectangular range",
+          "formula": "=SUM(A1:B2)",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Number",
+              "value": 1
+            },
+            "cell:A2": {
+              "_tag": "Number",
+              "value": 2
+            },
+            "cell:B1": {
+              "_tag": "Number",
+              "value": 3
+            },
+            "cell:B2": {
+              "_tag": "Number",
+              "value": 4
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 10
+          }
+        }
+      ]
+    },
+    {
+      "id": "extension.fields",
+      "section": "project extension",
+      "status": "extension",
+      "cases": [
+        {
+          "name": "form field",
+          "formula": "=[price]*[quantity]",
+          "bindings": {
+            "field:price": {
+              "_tag": "Number",
+              "value": 5
+            },
+            "field:quantity": {
+              "_tag": "Number",
+              "value": 3
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "conversion.number",
+      "section": "6.3.5",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "blank is zero",
+          "formula": "=A1+2",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Blank"
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 2
+          }
+        },
+        {
+          "name": "logical true is one",
+          "formula": "=TRUE+2",
+          "expected": {
+            "_tag": "Number",
+            "value": 3
+          }
+        },
+        {
+          "name": "numeric text",
+          "formula": "=\"2\"+3",
+          "expected": {
+            "_tag": "Number",
+            "value": 5
+          }
+        },
+        {
+          "name": "invalid numeric text",
+          "formula": "=\"two\"+3",
+          "expected": {
+            "_tag": "Error",
+            "code": "#VALUE!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "conversion.logical",
+      "section": "6.3.12",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "zero false",
+          "formula": "=IF(0;1;2)",
+          "expected": {
+            "_tag": "Number",
+            "value": 2
+          }
+        },
+        {
+          "name": "nonzero true",
+          "formula": "=IF(-2;1;2)",
+          "expected": {
+            "_tag": "Number",
+            "value": 1
+          }
+        },
+        {
+          "name": "text error",
+          "formula": "=IF(\"yes\";1;2)",
+          "expected": {
+            "_tag": "Error",
+            "code": "#VALUE!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "conversion.text",
+      "section": "6.3.14",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "blank concat",
+          "formula": "=A1&\"x\"",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Blank"
+            }
+          },
+          "expected": {
+            "_tag": "Text",
+            "value": "x"
+          }
+        },
+        {
+          "name": "boolean concat",
+          "formula": "=TRUE&\"!\"",
+          "expected": {
+            "_tag": "Text",
+            "value": "TRUE!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator.arithmetic",
+      "section": "6.4.2-6.4.6",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "addition",
+          "formula": "=1+2",
+          "expected": {
+            "_tag": "Number",
+            "value": 3
+          }
+        },
+        {
+          "name": "division by zero",
+          "formula": "=1/0",
+          "expected": {
+            "_tag": "Error",
+            "code": "#DIV/0!"
+          }
+        },
+        {
+          "name": "nonfinite power",
+          "formula": "=0^-1",
+          "expected": {
+            "_tag": "Error",
+            "code": "#NUM!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator.comparison",
+      "section": "6.4.7-6.4.9",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "numeric equality",
+          "formula": "=2=2",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        },
+        {
+          "name": "case insensitive text",
+          "formula": "=\"A\"=\"a\"",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        },
+        {
+          "name": "ordered numbers",
+          "formula": "=2<3",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "operator.concat",
+      "section": "6.4.10",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "concatenation",
+          "formula": "=\"a\"&2",
+          "expected": {
+            "_tag": "Text",
+            "value": "a2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.sum",
+      "section": "6.16.61",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "sum direct",
+          "formula": "=SUM(1;2;3)",
+          "expected": {
+            "_tag": "Number",
+            "value": 6
+          }
+        },
+        {
+          "name": "range ignores text and blank",
+          "formula": "=SUM(A1:A3)",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Number",
+              "value": 3
+            },
+            "cell:A2": {
+              "_tag": "Text",
+              "value": "4"
+            },
+            "cell:A3": {
+              "_tag": "Blank"
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.average",
+      "section": "6.18.3",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "mean",
+          "formula": "=AVERAGE(2;4)",
+          "expected": {
+            "_tag": "Number",
+            "value": 3
+          }
+        },
+        {
+          "name": "empty range",
+          "formula": "=AVERAGE(A1)",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Blank"
+            }
+          },
+          "expected": {
+            "_tag": "Error",
+            "code": "#DIV/0!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.min",
+      "section": "6.18.48",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "minimum",
+          "formula": "=MIN(3;1;2)",
+          "expected": {
+            "_tag": "Number",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.max",
+      "section": "6.18.45",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "maximum",
+          "formula": "=MAX(3;1;2)",
+          "expected": {
+            "_tag": "Number",
+            "value": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.count",
+      "section": "6.13.6",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "count numbers in range",
+          "formula": "=COUNT(A1:A3)",
+          "bindings": {
+            "cell:A1": {
+              "_tag": "Number",
+              "value": 1
+            },
+            "cell:A2": {
+              "_tag": "Text",
+              "value": "2"
+            },
+            "cell:A3": {
+              "_tag": "Blank"
+            }
+          },
+          "expected": {
+            "_tag": "Number",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.if",
+      "section": "6.15.4",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "selected branch only",
+          "formula": "=IF(TRUE;42;1/0)",
+          "expected": {
+            "_tag": "Number",
+            "value": 42
+          }
+        },
+        {
+          "name": "false branch",
+          "formula": "=IF(FALSE;1;2)",
+          "expected": {
+            "_tag": "Number",
+            "value": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.iferror",
+      "section": "6.15.5",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "fallback",
+          "formula": "=IFERROR(1/0;9)",
+          "expected": {
+            "_tag": "Number",
+            "value": 9
+          }
+        },
+        {
+          "name": "preserve good value",
+          "formula": "=IFERROR(5;9)",
+          "expected": {
+            "_tag": "Number",
+            "value": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.and",
+      "section": "6.15.2",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "all true",
+          "formula": "=AND(TRUE;1)",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        },
+        {
+          "name": "one false",
+          "formula": "=AND(TRUE;0)",
+          "expected": {
+            "_tag": "Boolean",
+            "value": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.or",
+      "section": "6.15.8",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "one true",
+          "formula": "=OR(FALSE;1)",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "function.not",
+      "section": "6.15.7",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "negation",
+          "formula": "=NOT(FALSE)",
+          "expected": {
+            "_tag": "Boolean",
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "errors.propagation",
+      "section": "6.1",
+      "status": "partial",
+      "cases": [
+        {
+          "name": "division error propagates",
+          "formula": "=1/0+3",
+          "expected": {
+            "_tag": "Error",
+            "code": "#DIV/0!"
+          }
+        },
+        {
+          "name": "unknown function",
+          "formula": "=MISSING(1)",
+          "expected": {
+            "_tag": "Error",
+            "code": "#NAME?"
+          }
+        }
+      ]
+    }
+  ],
+  "unsupported": [
+    {
+      "id": "syntax.named-expressions",
+      "section": "5.11",
+      "reason": "No named expressions"
+    },
+    {
+      "id": "syntax.inline-arrays",
+      "section": "5.13",
+      "reason": "No inline array literals"
+    },
+    {
+      "id": "syntax.reference-union-intersection",
+      "section": "6.4.12-6.4.13",
+      "reason": "Only rectangular ranges"
+    },
+    {
+      "id": "types.dates",
+      "section": "4.3.3-4.3.4",
+      "reason": "No date serial or timezone policy"
+    },
+    {
+      "id": "types.complex",
+      "section": "4.4",
+      "reason": "No complex values"
+    },
+    {
+      "id": "functions.lookup",
+      "section": "6.14",
+      "reason": "Lookup functions deferred"
+    },
+    {
+      "id": "functions.criteria",
+      "section": "4.11.11",
+      "reason": "Criteria functions deferred"
+    },
+    {
+      "id": "evaluator.small-group",
+      "section": "2.3.2",
+      "reason": "Full syntax, conversion, limits, and function requirements unaudited"
+    }
+  ]
+}
