@@ -632,6 +632,12 @@
       }
     },
     {
+      "id": "function.LEN",
+      "name": "number converts to text before counting",
+      "formula": "=LEN(123.5)",
+      "expected": { "_tag": "Number", "value": 5 }
+    },
+    {
       "id": "function.LEFT",
       "name": "first Unicode character",
       "formula": "=LEFT(\"😀abc\")",
@@ -639,6 +645,12 @@
         "_tag": "Text",
         "value": "😀"
       }
+    },
+    {
+      "id": "function.LEFT",
+      "name": "fractional length uses INT",
+      "formula": "=LEFT(\"abcd\";2.9)",
+      "expected": { "_tag": "Text", "value": "ab" }
     },
     {
       "id": "function.RIGHT",
@@ -650,6 +662,12 @@
       }
     },
     {
+      "id": "function.RIGHT",
+      "name": "zero length returns empty text",
+      "formula": "=RIGHT(\"abcd\";0)",
+      "expected": { "_tag": "Text", "value": "" }
+    },
+    {
       "id": "function.MID",
       "name": "middle substring",
       "formula": "=MID(\"abcd\";2;2)",
@@ -657,6 +675,18 @@
         "_tag": "Text",
         "value": "bc"
       }
+    },
+    {
+      "id": "function.MID",
+      "name": "fractional coordinates use INT",
+      "formula": "=MID(\"abcd\";2.9;1.9)",
+      "expected": { "_tag": "Text", "value": "b" }
+    },
+    {
+      "id": "function.MID",
+      "name": "start past end returns empty text",
+      "formula": "=MID(\"abcd\";5;2)",
+      "expected": { "_tag": "Text", "value": "" }
     },
     {
       "id": "function.LOWER",
@@ -711,6 +741,30 @@
         "_tag": "Error",
         "code": "#VALUE!"
       }
+    },
+    {
+      "id": "function.FIND",
+      "name": "start position skips an earlier match",
+      "formula": "=FIND(\"a\";\"baab\";3)",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.FIND",
+      "name": "search remains case sensitive",
+      "formula": "=FIND(\"a\";\"Aabc\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.FIND",
+      "name": "astral character counts as one position",
+      "formula": "=FIND(\"b\";\"a😀b\")",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.FIND",
+      "name": "start after text returns an error",
+      "formula": "=FIND(\"a\";\"abc\";5)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
       "id": "function.REPT",
@@ -915,6 +969,30 @@
         "_tag": "Text",
         "value": "aXYd"
       }
+    },
+    {
+      "id": "function.REPLACE",
+      "name": "fractional start and count follow LEFT and MID composition",
+      "formula": "=REPLACE(\"abcd\";2.5;0.5;\"X\")",
+      "expected": { "_tag": "Text", "value": "aXcd" }
+    },
+    {
+      "id": "function.REPLACE",
+      "name": "fractional count can span another character",
+      "formula": "=REPLACE(\"abcd\";2.5;1.5;\"X\")",
+      "expected": { "_tag": "Text", "value": "aXd" }
+    },
+    {
+      "id": "function.REPLACE",
+      "name": "zero count inserts before start",
+      "formula": "=REPLACE(\"abcd\";2;0;\"X\")",
+      "expected": { "_tag": "Text", "value": "aXbcd" }
+    },
+    {
+      "id": "function.REPLACE",
+      "name": "replacement can reach past text end",
+      "formula": "=REPLACE(\"abcd\";3;20;\"X\")",
+      "expected": { "_tag": "Text", "value": "abX" }
     },
     {
       "id": "function.SUBSTITUTE",

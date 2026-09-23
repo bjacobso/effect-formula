@@ -67,8 +67,9 @@ function evaluateExtra(name: string, args: readonly Value[]): Scalar {
       return error("#VALUE!");
     if (start.value < 1 || length.value < 0) return error("#VALUE!");
     const chars = Array.from(source.value);
-    chars.splice(Math.trunc(start.value) - 1, Math.trunc(length.value), replacement.value);
-    return text(chars.join(""));
+    const before = chars.slice(0, Math.floor(start.value - 1)).join("");
+    const after = chars.slice(Math.floor(start.value + length.value - 1)).join("");
+    return text(before + replacement.value + after);
   }
   if (name === "SUBSTITUTE") {
     if (args.length < 3 || args.length > 4) return error("#VALUE!");
