@@ -80,6 +80,32 @@ describe("formula graph type analysis", () => {
     expect(graph.formulas.get("field:display")?.types).toEqual(["Error", "Number", "Text"]);
   });
 
+  it("infers SUM over formula cells", async () => {
+    const graph = await Effect.runPromise(
+      analyzeFormulaGraph(
+        new Map([
+          ["cell:B1", parseSync("=SUM(A1:A2)")],
+          ["cell:A1", parseSync("=2")],
+        ]),
+        { "cell:A2": "Number" },
+      ),
+    );
+    expect(graph.dependencies.get("cell:B1")).toEqual(["cell:A1", "cell:A2"]);
+    expect(graph.formulas.get("cell:B1")?.types).toEqual(["Number"]);
+  });
+
+  it("passes grid bounds through range input and type analysis", async () => {
+    const graph = await Effect.runPromise(
+      analyzeFormulaGraph(
+        new Map([["cell:B1", parseSync("=SUM([.A:.A])")]]),
+        { "cell:A1": "Number", "cell:A2": "Number" },
+        { grid: { rows: 2, columns: 2 } },
+      ),
+    );
+    expect(graph.dependencies.get("cell:B1")).toEqual(["cell:A1", "cell:A2"]);
+    expect(graph.formulas.get("cell:B1")?.types).toEqual(["Number"]);
+  });
+
   it("marks cycle members and propagates their error downstream", async () => {
     const formulas = new Map([
       ["field:after", parseSync("=[a]+1")],

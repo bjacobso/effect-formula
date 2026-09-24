@@ -23,6 +23,7 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [x] Include source spans in type diagnostics when parsing with `captureSpans`.
 - [x] Analyze a graph of formulas in dependency order, propagating possible types and reporting static cycles.
 - [x] Analyze lazy `IF`, `IFERROR`, and `CHOOSE` result categories, narrowing statically known selections.
+- [x] Analyze numeric aggregate return categories using declared range cell types and NumberSequence conversion rules.
 - [ ] Expand audited function signatures so type diagnostics cover more calls.
 
 **Exit:** both examples run against the same core; table-driven tests cover precedence, coercion, blank/error behavior, ranges, and `IF` branch laziness. Unsupported syntax fails clearly.

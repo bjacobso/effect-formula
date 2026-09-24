@@ -1,5 +1,6 @@
 import { Effect, Option } from "effect";
-import type { FunctionRegistryService } from "./Engine.js";
+import type { FormulaAnalysisOptions } from "./Analysis.js";
+import { type FunctionRegistryService, rangeKeys } from "./Engine.js";
 import type { FormulaType, FunctionSignature } from "./FunctionSignature.js";
 import type { Ast, SourceSpan } from "./Parser.js";
 import { isError, toBoolean, toNumber } from "./Value.js";
@@ -23,14 +24,20 @@ export interface FormulaTypeAnalysis {
   readonly diagnostics: readonly TypeDiagnostic[];
 }
 export type FormulaInputType = FormulaType | readonly FormulaType[];
+export interface TypeAnalysisOptions extends FormulaAnalysisOptions {
+  readonly registry?: FunctionRegistryService;
+}
 
 /** Analyze supported AST operations against host-declared reference types. */
 export const analyzeFormulaTypes = (
   ast: Ast,
   inputTypes: Readonly<Record<string, FormulaInputType>>,
-  registry?: FunctionRegistryService,
+  config: FunctionRegistryService | TypeAnalysisOptions = {},
+  legacyOptions: FormulaAnalysisOptions = {},
 ): Effect.Effect<FormulaTypeAnalysis> =>
   Effect.sync(() => {
+    const registry = "functions" in config ? config : config.registry;
+    const options = "functions" in config ? legacyOptions : config;
     const diagnostics: TypeDiagnostic[] = [];
     const report = (
       node: Ast,
@@ -41,6 +48,13 @@ export const analyzeFormulaTypes = (
       diagnostics.push({ path, severity, message, ...(node.span ? { span: node.span } : {}) });
     };
     const unique = (types: readonly FormulaType[]): readonly FormulaType[] => [...new Set(types)];
+    const referenceTypes = (key: string, node: Ast, path: string): readonly FormulaType[] => {
+      const declared = Option.fromNullable(inputTypes[key]);
+      if (Option.isSome(declared))
+        return typeof declared.value === "string" ? [declared.value] : declared.value;
+      report(node, path, "possible", `No declared type for ${key}`);
+      return ["Unknown"];
+    };
     const knownBoolean = (node: Ast): Option.Option<boolean> => {
       if (node._tag === "Literal") {
         const converted = toBoolean(node.value);
@@ -99,11 +113,7 @@ export const analyzeFormulaTypes = (
         case "Literal":
           return [node.value._tag];
         case "Reference": {
-          const declared = Option.fromNullable(inputTypes[node.key]);
-          if (Option.isSome(declared))
-            return typeof declared.value === "string" ? [declared.value] : declared.value;
-          report(node, path, "possible", `No declared type for ${node.key}`);
-          return ["Unknown"];
+          return referenceTypes(node.key, node, path);
         }
         case "Range":
           return ["Range"];
@@ -204,6 +214,91 @@ export const analyzeFormulaTypes = (
           if (custom) {
             for (const [index, arg] of node.args.entries()) infer(arg, `${path}.args[${index}]`);
             return ["Unknown"];
+          }
+          if (
+            ["SUM", "AVERAGE", "MIN", "MAX", "COUNT", "COUNTA", "COUNTBLANK"].includes(node.name)
+          ) {
+            if (
+              node.name === "COUNTBLANK" &&
+              (node.args.length !== 1 || !["Reference", "Range"].includes(node.args[0]?._tag ?? ""))
+            ) {
+              report(node, path, "definite", "COUNTBLANK expects one reference");
+              return ["Error"];
+            }
+            if (node.name === "COUNT" || node.name === "COUNTA" || node.name === "COUNTBLANK") {
+              for (const [index, arg] of node.args.entries()) infer(arg, `${path}.args[${index}]`);
+              return ["Number"];
+            }
+            let certainNumber = false;
+            let possibleNumber = false;
+            let definiteError = false;
+            let possibleError = false;
+            let unknown = false;
+            for (const [index, arg] of node.args.entries()) {
+              const argPath = `${path}.args[${index}]`;
+              const referenced = arg._tag === "Reference" || arg._tag === "Range";
+              let candidates: readonly (readonly FormulaType[])[];
+              if (arg._tag === "Range") {
+                const cells = rangeKeys(
+                  arg.start,
+                  arg.end,
+                  options.maxRangeCells ?? 10000,
+                  options.grid,
+                );
+                if (Option.isNone(cells)) {
+                  report(arg, argPath, "definite", "Cannot expand range");
+                  definiteError = true;
+                  continue;
+                }
+                candidates = cells.value.flat().map((key) => {
+                  const declared = Option.fromNullable(inputTypes[key]);
+                  if (Option.isNone(declared)) {
+                    unknown = true;
+                    return ["Unknown"];
+                  }
+                  return typeof declared.value === "string" ? [declared.value] : declared.value;
+                });
+                if (candidates.some((types) => types.includes("Unknown")))
+                  report(arg, argPath, "possible", "Type of some range cells is unknown");
+              } else candidates = [infer(arg, argPath)];
+              for (const types of candidates) {
+                const converted = referenced
+                  ? unique([
+                      ...types.filter(
+                        (type) => type === "Number" || type === "Error" || type === "Unknown",
+                      ),
+                      ...(types.includes("Range")
+                        ? [arg._tag === "Range" ? ("Error" as const) : ("Unknown" as const)]
+                        : []),
+                    ])
+                  : unique([
+                      ...(types.includes("Blank") ? ["Blank" as const] : []),
+                      ...(types.includes("Range") ? ["Unknown" as const] : []),
+                      ...conversion(
+                        arg,
+                        types.filter((type) => type !== "Blank" && type !== "Range"),
+                        "Number",
+                        argPath,
+                      ),
+                    ]);
+                if (converted.includes("Number")) possibleNumber = true;
+                if (converted.length === 1 && converted[0] === "Number") certainNumber = true;
+                if (converted.includes("Error")) {
+                  possibleError = true;
+                  if (converted.length === 1) definiteError = true;
+                }
+                if (converted.includes("Unknown")) {
+                  unknown = true;
+                  possibleNumber = true;
+                }
+              }
+            }
+            if (definiteError) return ["Error"];
+            const result: FormulaType[] = [];
+            if (node.name !== "AVERAGE" || possibleNumber) result.push("Number");
+            if (possibleError || (node.name === "AVERAGE" && !certainNumber)) result.push("Error");
+            if (unknown) result.push("Unknown");
+            return unique(result);
           }
           if (node.name === "TRUE" || node.name === "FALSE")
             return node.args.length === 0 ? ["Boolean"] : ["Error"];

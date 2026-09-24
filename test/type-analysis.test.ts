@@ -162,6 +162,55 @@ describe("AST type analysis", () => {
     });
   });
 
+  it("analyzes numeric aggregates with direct and referenced conversion rules", () => {
+    expect(analyze('=SUM(1;"2";TRUE())')).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze('=SUM("bad")')).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        {
+          path: "root.args[0]",
+          severity: "definite",
+          message: "Cannot guarantee conversion to Number",
+        },
+      ],
+    });
+    expect(analyze("=SUM([amount])", { "field:amount": "Text" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze("=SUM(A1:A2)", { "cell:A1": "Number", "cell:A2": "Error" })).toEqual({
+      types: ["Error"],
+      diagnostics: [],
+    });
+    expect(analyze("=SUM(A1:A2)", { "cell:A1": "Number", "cell:A2": "Text" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze("=SUM(A1:A2)", { "cell:A1": "Range", "cell:A2": "Number" })).toEqual({
+      types: ["Error"],
+      diagnostics: [],
+    });
+    expect(analyze("=SUM([values])", { "field:values": "Range" })).toEqual({
+      types: ["Number", "Unknown"],
+      diagnostics: [],
+    });
+    expect(analyze("=AVERAGE(A1:A2)", { "cell:A1": "Text", "cell:A2": "Boolean" })).toEqual({
+      types: ["Error"],
+      diagnostics: [],
+    });
+    expect(analyze('=COUNT(#N/A;"bad")')).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=COUNTA(A1:A2)")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(
+      Effect.runSync(
+        analyzeFormulaTypes(
+          parseSync("=SUM([.A:.A])"),
+          { "cell:A1": "Number", "cell:A2": "Number" },
+          { grid: { rows: 2, columns: 1 } },
+        ),
+      ),
+    ).toEqual({ types: ["Number"], diagnostics: [] });
+  });
+
   it("uses signatures and removals from the runtime function profile", () => {
     const profile = configureFunctions({
       register: {

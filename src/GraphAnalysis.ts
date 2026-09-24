@@ -67,7 +67,11 @@ export const analyzeFormulaGraph = (
                 },
               ],
             }
-          : yield* analyzeFormulaTypes(ast.value, resolved, registry);
+          : yield* analyzeFormulaTypes(
+              ast.value,
+              resolved,
+              registry ? { ...options, registry } : options,
+            );
         results.set(key, result);
         return result;
       });
