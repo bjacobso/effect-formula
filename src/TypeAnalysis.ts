@@ -2,7 +2,7 @@ import { Effect, Option } from "effect";
 import type { FunctionRegistryService } from "./Engine.js";
 import type { FormulaType, FunctionSignature } from "./FunctionSignature.js";
 import type { Ast, SourceSpan } from "./Parser.js";
-import { isError, toNumber } from "./Value.js";
+import { isError, toBoolean, toNumber } from "./Value.js";
 
 const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
   ABS: { parameters: ["Number"], returns: "Number" },
@@ -41,6 +41,21 @@ export const analyzeFormulaTypes = (
       diagnostics.push({ path, severity, message, ...(node.span ? { span: node.span } : {}) });
     };
     const unique = (types: readonly FormulaType[]): readonly FormulaType[] => [...new Set(types)];
+    const knownBoolean = (node: Ast): Option.Option<boolean> => {
+      if (node._tag === "Literal") {
+        const converted = toBoolean(node.value);
+        return isError(converted) ? Option.none() : Option.some(converted.value);
+      }
+      if (
+        node._tag === "Call" &&
+        node.args.length === 0 &&
+        (node.name === "TRUE" || node.name === "FALSE") &&
+        !registry?.disabled?.has(node.name) &&
+        !registry?.functions.has(node.name)
+      )
+        return Option.some(node.name === "TRUE");
+      return Option.none();
+    };
     const conversion = (
       node: Ast,
       types: readonly FormulaType[],
@@ -140,7 +155,6 @@ export const analyzeFormulaTypes = (
           return unique(result);
         }
         case "Call": {
-          const args = node.args.map((arg, index) => infer(arg, `${path}.args[${index}]`));
           if (registry?.disabled?.has(node.name)) return ["Error"];
           const custom = registry?.functions.has(node.name) === true;
           const signature = custom
@@ -156,6 +170,7 @@ export const analyzeFormulaTypes = (
               );
               return ["Error"];
             }
+            const args = node.args.map((arg, index) => infer(arg, `${path}.args[${index}]`));
             const converted = signature.parameters.map((parameter, index) =>
               parameter === "Value"
                 ? args[index]!
@@ -186,27 +201,93 @@ export const analyzeFormulaTypes = (
               result.push(signature.returns);
             return unique(result);
           }
-          if (custom) return ["Unknown"];
+          if (custom) {
+            for (const [index, arg] of node.args.entries()) infer(arg, `${path}.args[${index}]`);
+            return ["Unknown"];
+          }
           if (node.name === "TRUE" || node.name === "FALSE")
             return node.args.length === 0 ? ["Boolean"] : ["Error"];
-          if (node.name !== "IF") return ["Unknown"];
-          if (node.args.length < 1 || node.args.length > 3) {
-            report(node, path, "definite", "IF expects one to three arguments");
-            return ["Error"];
+          if (node.name === "IFERROR") {
+            if (node.args.length !== 2) {
+              report(node, path, "definite", "IFERROR expects 2 arguments");
+              return ["Error"];
+            }
+            const first = infer(node.args[0]!, `${path}.args[0]`);
+            if (node.args[0]?._tag === "Literal" && node.args[0].value._tag !== "Error")
+              return first;
+            const fallback = infer(node.args[1]!, `${path}.args[1]`);
+            if (first.length === 1 && first[0] === "Error") return fallback;
+            return unique([...first.filter((type) => type !== "Error"), ...fallback]);
           }
-          const condition = conversion(node.args[0]!, args[0]!, "Boolean", `${path}.args[0]`);
-          if (node.args.length === 1) return condition;
-          const result: FormulaType[] = [];
-          if (condition.includes("Error")) result.push("Error");
-          if (condition.includes("Unknown")) result.push("Unknown");
-          if (condition.includes("Boolean") || condition.includes("Unknown")) {
+          if (node.name === "CHOOSE") {
+            if (node.args.length < 2) {
+              report(node, path, "definite", "CHOOSE expects at least 2 arguments");
+              return ["Error"];
+            }
+            const indexNode = node.args[0]!;
+            const index = conversion(
+              indexNode,
+              infer(indexNode, `${path}.args[0]`),
+              "Number",
+              `${path}.args[0]`,
+            );
+            if (!index.includes("Number") && !index.includes("Unknown")) return ["Error"];
+            if (indexNode._tag === "Literal") {
+              const known = toNumber(indexNode.value);
+              if (!isError(known)) {
+                const selected = Math.trunc(known.value);
+                if (selected < 1 || selected >= node.args.length) {
+                  report(indexNode, `${path}.args[0]`, "definite", "CHOOSE index is out of range");
+                  return ["Error"];
+                }
+                return infer(node.args[selected]!, `${path}.args[${selected}]`);
+              }
+            }
+            return unique([
+              "Error",
+              ...(index.includes("Unknown") ? ["Unknown" as const] : []),
+              ...node.args
+                .slice(1)
+                .flatMap((arg, offset) => infer(arg, `${path}.args[${offset + 1}]`)),
+            ]);
+          }
+          if (node.name === "IF") {
+            if (node.args.length < 1 || node.args.length > 3) {
+              report(node, path, "definite", "IF expects one to three arguments");
+              return ["Error"];
+            }
+            const conditionNode = node.args[0]!;
+            const condition = conversion(
+              conditionNode,
+              infer(conditionNode, `${path}.args[0]`),
+              "Boolean",
+              `${path}.args[0]`,
+            );
+            if (
+              node.args.length === 1 ||
+              (!condition.includes("Boolean") && !condition.includes("Unknown"))
+            )
+              return condition;
+            const known = knownBoolean(conditionNode);
+            if (Option.isSome(known)) {
+              const selected = known.value ? node.args[1] : node.args[2];
+              if (!selected) return ["Boolean"];
+              return selected._tag === "Missing"
+                ? ["Number"]
+                : infer(selected, `${path}.args[${known.value ? 1 : 2}]`);
+            }
+            const result: FormulaType[] = [];
+            if (condition.includes("Error")) result.push("Error");
+            if (condition.includes("Unknown")) result.push("Unknown");
             if (node.args[1]?._tag === "Missing") result.push("Number");
-            else result.push(...args[1]!);
+            else result.push(...infer(node.args[1]!, `${path}.args[1]`));
             if (!node.args[2]) result.push("Boolean");
             else if (node.args[2]._tag === "Missing") result.push("Number");
-            else result.push(...args[2]!);
+            else result.push(...infer(node.args[2], `${path}.args[2]`));
+            return unique(result);
           }
-          return unique(result);
+          for (const [index, arg] of node.args.entries()) infer(arg, `${path}.args[${index}]`);
+          return ["Unknown"];
         }
       }
     };

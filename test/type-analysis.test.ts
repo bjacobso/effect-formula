@@ -72,6 +72,46 @@ describe("AST type analysis", () => {
       types: ["Number", "Boolean"],
       diagnostics: [],
     });
+    expect(analyze("=IF(FALSE();[missing];42)")).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+  });
+
+  it("tracks IFERROR's fallback without assuming arithmetic cannot fail", () => {
+    expect(analyze("=IFERROR(#N/A;9)")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=IFERROR(1;[missing])")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze('=IFERROR(1/0;"fallback")')).toEqual({
+      types: ["Number", "Text"],
+      diagnostics: [],
+    });
+    expect(analyze('=IFERROR([maybe];"fallback")', { "field:maybe": ["Number", "Error"] })).toEqual(
+      {
+        types: ["Number", "Text"],
+        diagnostics: [],
+      },
+    );
+    expect(analyze("=IFERROR(1)")).toEqual({
+      types: ["Error"],
+      diagnostics: [{ path: "root", severity: "definite", message: "IFERROR expects 2 arguments" }],
+    });
+  });
+
+  it("narrows CHOOSE for a literal index and unions dynamic choices", () => {
+    expect(analyze("=CHOOSE(2;[missing];42)")).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze('=CHOOSE([index];1;"x")', { "field:index": "Number" })).toEqual({
+      types: ["Error", "Number", "Text"],
+      diagnostics: [],
+    });
+    expect(analyze("=CHOOSE(3;1;2)")).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        { path: "root.args[0]", severity: "definite", message: "CHOOSE index is out of range" },
+      ],
+    });
   });
 
   it("keeps missing declarations and unsupported functions unknown", () => {

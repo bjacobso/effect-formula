@@ -66,6 +66,20 @@ describe("formula graph type analysis", () => {
     expect(graph.formulas.get("field:after")?.types).toEqual(["Number"]);
   });
 
+  it("propagates IFERROR and CHOOSE result categories", async () => {
+    const graph = await Effect.runPromise(
+      analyzeFormulaGraph(
+        new Map([
+          ["field:display", parseSync('=CHOOSE([choice];[safe];"none")')],
+          ["field:safe", parseSync("=IFERROR([raw];0)")],
+        ]),
+        { "field:choice": "Number", "field:raw": ["Number", "Error"] },
+      ),
+    );
+    expect(graph.formulas.get("field:safe")?.types).toEqual(["Number"]);
+    expect(graph.formulas.get("field:display")?.types).toEqual(["Error", "Number", "Text"]);
+  });
+
   it("marks cycle members and propagates their error downstream", async () => {
     const formulas = new Map([
       ["field:after", parseSync("=[a]+1")],
