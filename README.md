@@ -42,7 +42,7 @@ For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` a
 
 ```ts
 import { Effect, Schema } from "effect"
-import { formulaInputSchema, formulaInputs, parse } from "effect-formula"
+import { analyzeFormulaTypes, formulaInputSchema, formulaInputs, parse } from "effect-formula"
 
 const ast = await Effect.runPromise(parse("=[price]*[quantity]"))
 const inputs = await Effect.runPromise(formulaInputs(ast))
@@ -56,9 +56,15 @@ const values = await Effect.runPromise(Schema.decodeUnknown(schema)({
   "field:price": 12,
   "field:quantity": 3,
 }))
+
+const analysis = await Effect.runPromise(analyzeFormulaTypes(ast, {
+  "field:price": "Number",
+  "field:quantity": "Number",
+}))
+// { types: ["Number"], diagnostics: [] }
 ```
 
-The host supplies a schema for every referenced key. Formula syntax alone cannot guarantee a reference's type: operators coerce values, branches may be conditional, and registered functions have no declared signatures. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
+The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, and `IF`. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Other functions and undeclared references return `Unknown`. This pass does not replace runtime validation or evaluation, and custom functions have no declared signatures yet. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
 
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 

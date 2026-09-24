@@ -18,6 +18,8 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [x] Implement central conversions and operators, then the first functions from SPEC section 7.
 - [x] Define Effect services for reference resolution and custom functions. Provide an in-memory resolver and spreadsheet/form adapters.
 - [x] Expose parse and evaluate APIs with examples for a cell range and a form field.
+- [x] Expose AST input extraction, host-supplied input schemas, and a first type analysis pass for operators and `IF`.
+- [ ] Add function signature metadata and source spans so type diagnostics can cover calls and point to formula text.
 
 **Exit:** both examples run against the same core; table-driven tests cover precedence, coercion, blank/error behavior, ranges, and `IF` branch laziness. Unsupported syntax fails clearly.
 
