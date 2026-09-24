@@ -64,7 +64,7 @@ const analysis = await Effect.runPromise(analyzeFormulaTypes(ast, {
 // { types: ["Number"], diagnostics: [] }
 ```
 
-The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, and `IF`. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Other functions and undeclared references return `Unknown`. This pass does not replace runtime validation or evaluation, and custom functions have no declared signatures yet. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
+The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, `IF`, and functions with known signatures. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Functions without a signature and undeclared references return `Unknown`. This pass does not replace runtime validation or evaluation. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
 
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 
@@ -84,12 +84,17 @@ const functions = configureFunctions({
   register: {
     TRIPLE: ([value]) => Effect.succeed(number(value?._tag === "Number" ? value.value * 3 : 0)),
   },
+  signatures: {
+    TRIPLE: { parameters: ["Number"], returns: "Number" },
+  },
   remove: ["NOW", "TODAY"],
 })
 const services = Layer.merge(memory(new Map()), functions)
 ```
 
 Provide `functions` to `createSpreadsheet()` or `createForm(fields)` to use the profile in a host adapter. The `spreadsheet()` and `form(fields)` shortcuts use the default function set. Registered functions receive evaluated arguments. An override of a lazy built-in such as `IF` receives all evaluated arguments; the built-in retains its lazy behavior when not overridden. A removed name returns `#NAME?`, even if also registered.
+
+Signatures are optional metadata for `analyzeFormulaTypes`. They describe exact arity, assumed argument conversions, and a result category; they do not change or validate the runtime implementation. A custom function must honor its declared signature. Supply the same profile's `FunctionRegistry` service as the third analysis argument to apply registered signatures, overrides, and removals. The analyzer currently includes signatures for `ABS`, `LEN`, `LOWER`, `NOT`, and `UPPER`; other built-ins remain `Unknown` until their signatures are audited.
 
 ### Host adapters
 

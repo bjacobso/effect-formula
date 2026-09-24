@@ -1,6 +1,16 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { analyzeFormulaTypes, parseSync } from "../src/index.js";
+import {
+  analyzeFormulaTypes,
+  blank,
+  configureFunctions,
+  FunctionRegistry,
+  number,
+  parseSync,
+  scalar,
+  toNumber,
+  toText,
+} from "../src/index.js";
 
 const analyze = (formula: string, types: Parameters<typeof analyzeFormulaTypes>[1] = {}) =>
   Effect.runSync(analyzeFormulaTypes(parseSync(formula), types));
@@ -88,5 +98,72 @@ describe("AST type analysis", () => {
         },
       ],
     });
+  });
+
+  it("checks the signatures of selected built-in functions", () => {
+    expect(analyze("=ABS([amount])", { "field:amount": "Number" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze("=LEN(42)")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze('=NOT("yes")')).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        {
+          path: "root.args[0]",
+          severity: "definite",
+          message: "Cannot guarantee conversion to Boolean",
+        },
+      ],
+    });
+    expect(analyze("=ABS(1;2)")).toEqual({
+      types: ["Error"],
+      diagnostics: [{ path: "root", severity: "definite", message: "ABS expects 1 argument" }],
+    });
+  });
+
+  it("uses signatures and removals from the runtime function profile", () => {
+    const profile = configureFunctions({
+      register: {
+        DOUBLE: ([value]) => {
+          const converted = toNumber(scalar(value ?? blank));
+          return Effect.succeed(
+            converted._tag === "Error" ? converted : number(converted.value * 2),
+          );
+        },
+        ABS: ([value]) => Effect.succeed(toText(scalar(value ?? blank))),
+      },
+      signatures: {
+        double: { parameters: ["Number"], returns: "Number" },
+        abs: { parameters: ["Text"], returns: "Text" },
+      },
+      remove: ["LEN"],
+    });
+    const results = Effect.gen(function* () {
+      const registry = yield* FunctionRegistry;
+      return [
+        yield* analyzeFormulaTypes(
+          parseSync("=DOUBLE([amount])"),
+          { "field:amount": "Text" },
+          registry,
+        ),
+        yield* analyzeFormulaTypes(parseSync("=ABS(1)"), {}, registry),
+        yield* analyzeFormulaTypes(parseSync("=LEN(1)"), {}, registry),
+      ];
+    }).pipe(Effect.provide(profile));
+    expect(Effect.runSync(results)).toEqual([
+      {
+        types: ["Error", "Number"],
+        diagnostics: [
+          {
+            path: "root.args[0]",
+            severity: "possible",
+            message: "Cannot guarantee conversion to Number",
+          },
+        ],
+      },
+      { types: ["Text"], diagnostics: [] },
+      { types: ["Error"], diagnostics: [] },
+    ]);
   });
 });

@@ -1,8 +1,16 @@
 import { Effect, Option } from "effect";
+import type { FunctionRegistryService } from "./Engine.js";
+import type { FormulaType, FunctionSignature } from "./FunctionSignature.js";
 import type { Ast } from "./Parser.js";
 import { isError, toNumber } from "./Value.js";
 
-export type FormulaType = "Blank" | "Number" | "Text" | "Boolean" | "Error" | "Range" | "Unknown";
+const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
+  ABS: { parameters: ["Number"], returns: "Number" },
+  LEN: { parameters: ["Text"], returns: "Number" },
+  LOWER: { parameters: ["Text"], returns: "Text" },
+  NOT: { parameters: ["Boolean"], returns: "Boolean" },
+  UPPER: { parameters: ["Text"], returns: "Text" },
+};
 export interface TypeDiagnostic {
   readonly path: string;
   readonly severity: "definite" | "possible";
@@ -18,6 +26,7 @@ export interface FormulaTypeAnalysis {
 export const analyzeFormulaTypes = (
   ast: Ast,
   inputTypes: Readonly<Record<string, FormulaType>>,
+  registry?: FunctionRegistryService,
 ): Effect.Effect<FormulaTypeAnalysis> =>
   Effect.sync(() => {
     const diagnostics: TypeDiagnostic[] = [];
@@ -25,7 +34,7 @@ export const analyzeFormulaTypes = (
     const conversion = (
       node: Ast,
       types: readonly FormulaType[],
-      target: "Number" | "Boolean",
+      target: "Number" | "Boolean" | "Text",
       path: string,
     ): readonly FormulaType[] => {
       const result: FormulaType[] = [];
@@ -123,6 +132,51 @@ export const analyzeFormulaTypes = (
         }
         case "Call": {
           const args = node.args.map((arg, index) => infer(arg, `${path}.args[${index}]`));
+          if (registry?.disabled?.has(node.name)) return ["Error"];
+          const custom = registry?.functions.has(node.name) === true;
+          const signature = custom
+            ? registry?.signatures?.get(node.name)
+            : builtInSignatures[node.name];
+          if (signature) {
+            if (node.args.length !== signature.parameters.length) {
+              diagnostics.push({
+                path,
+                severity: "definite",
+                message: `${node.name} expects ${signature.parameters.length} argument${signature.parameters.length === 1 ? "" : "s"}`,
+              });
+              return ["Error"];
+            }
+            const converted = signature.parameters.map((parameter, index) =>
+              parameter === "Value"
+                ? args[index]!
+                : conversion(node.args[index]!, args[index]!, parameter, `${path}.args[${index}]`),
+            );
+            const result: FormulaType[] = [];
+            if (
+              converted.some(
+                (types, index) =>
+                  signature.parameters[index] !== "Value" && types.includes("Error"),
+              )
+            )
+              result.push("Error");
+            if (
+              converted.some(
+                (types, index) =>
+                  signature.parameters[index] !== "Value" && types.includes("Unknown"),
+              )
+            )
+              result.push("Unknown");
+            if (
+              converted.every(
+                (types, index) =>
+                  signature.parameters[index] === "Value" ||
+                  types.includes(signature.parameters[index] as FormulaType),
+              )
+            )
+              result.push(signature.returns);
+            return unique(result);
+          }
+          if (custom) return ["Unknown"];
           if (node.name === "TRUE" || node.name === "FALSE")
             return node.args.length === 0 ? ["Boolean"] : ["Error"];
           if (node.name !== "IF") return ["Unknown"];

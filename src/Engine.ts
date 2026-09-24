@@ -1,6 +1,7 @@
 import { Context, Data, Effect, Either, Layer, Option, pipe } from "effect";
 import { addressKey, columnLetters, type GridBounds, parseAddress, sameSheet } from "./Address.js";
 import { matchesCriterion } from "./Criterion.js";
+import type { FunctionSignature } from "./FunctionSignature.js";
 import { numberSequence } from "./NumberSequence.js";
 import type { Ast } from "./Parser.js";
 import { smallDatabase } from "./SmallDatabase.js";
@@ -44,6 +45,7 @@ export type CustomFunction = (args: readonly Value[]) => Effect.Effect<Value, Ev
 export interface FunctionRegistryService {
   readonly functions: ReadonlyMap<string, CustomFunction>;
   readonly disabled?: ReadonlySet<string>;
+  readonly signatures?: ReadonlyMap<string, FunctionSignature>;
 }
 export class FunctionRegistry extends Context.Tag("effect-formula/FunctionRegistry")<
   FunctionRegistry,
@@ -53,6 +55,7 @@ export const emptyFunctions = Layer.succeed(FunctionRegistry, { functions: new M
 export interface FunctionConfiguration {
   readonly register?: Readonly<Record<string, CustomFunction>>;
   readonly remove?: readonly string[];
+  readonly signatures?: Readonly<Record<string, FunctionSignature>>;
 }
 /** Create a function profile. Names are case-insensitive. */
 export function configureFunctions(config: FunctionConfiguration = {}) {
@@ -61,6 +64,12 @@ export function configureFunctions(config: FunctionConfiguration = {}) {
       Object.entries(config.register ?? {}).map(([name, fn]) => [name.toUpperCase(), fn]),
     ),
     disabled: new Set((config.remove ?? []).map((name) => name.toUpperCase())),
+    signatures: new Map(
+      Object.entries(config.signatures ?? {}).map(([name, signature]) => [
+        name.toUpperCase(),
+        signature,
+      ]),
+    ),
   });
 }
 export const memory = (values: ReadonlyMap<string, Value>) =>
