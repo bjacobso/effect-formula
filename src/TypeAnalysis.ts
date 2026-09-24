@@ -17,6 +17,7 @@ const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
   EXACT: { parameters: ["Text", "Text"], returns: "Boolean" },
   EXP: { parameters: ["Number"], returns: "Number" },
   FACT: { parameters: ["Number"], returns: "Number" },
+  FIND: { parameters: ["Text", "Text"], optionalParameters: ["Number"], returns: "Number" },
   INT: { parameters: ["Number"], returns: "Number" },
   ISBLANK: { parameters: ["Value"], returns: "Boolean" },
   ISERR: { parameters: ["Value"], returns: "Boolean" },
@@ -27,7 +28,9 @@ const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
   ISNUMBER: { parameters: ["Value"], returns: "Boolean" },
   ISTEXT: { parameters: ["Value"], returns: "Boolean" },
   LEN: { parameters: ["Text"], returns: "Number" },
+  LEFT: { parameters: ["Text"], optionalParameters: ["Number"], returns: "Text" },
   LN: { parameters: ["Number"], returns: "Number" },
+  LOG: { parameters: ["Number"], optionalParameters: ["Number"], returns: "Number" },
   LOG10: { parameters: ["Number"], returns: "Number" },
   LOWER: { parameters: ["Text"], returns: "Text" },
   MID: { parameters: ["Text", "Number", "Number"], returns: "Text" },
@@ -39,10 +42,13 @@ const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
   POWER: { parameters: ["Number", "Number"], returns: "Number" },
   RADIANS: { parameters: ["Number"], returns: "Number" },
   REPT: { parameters: ["Text", "Number"], returns: "Text" },
+  RIGHT: { parameters: ["Text"], optionalParameters: ["Number"], returns: "Text" },
+  ROUND: { parameters: ["Number"], optionalParameters: ["Number"], returns: "Number" },
   SIN: { parameters: ["Number"], returns: "Number" },
   SQRT: { parameters: ["Number"], returns: "Number" },
   TAN: { parameters: ["Number"], returns: "Number" },
   TRIM: { parameters: ["Text"], returns: "Text" },
+  TRUNC: { parameters: ["Number"], optionalParameters: ["Number"], returns: "Number" },
   UPPER: { parameters: ["Text"], returns: "Text" },
 };
 export interface TypeDiagnostic {
@@ -204,17 +210,25 @@ export const analyzeFormulaTypes = (
             ? registry?.signatures?.get(node.name)
             : builtInSignatures[node.name];
           if (signature) {
-            if (node.args.length !== signature.parameters.length) {
+            const minArguments = signature.parameters.length;
+            const maxArguments = minArguments + (signature.optionalParameters?.length ?? 0);
+            if (node.args.length < minArguments || node.args.length > maxArguments) {
               report(
                 node,
                 path,
                 "definite",
-                `${node.name} expects ${signature.parameters.length} argument${signature.parameters.length === 1 ? "" : "s"}`,
+                minArguments === maxArguments
+                  ? `${node.name} expects ${minArguments} argument${minArguments === 1 ? "" : "s"}`
+                  : `${node.name} expects ${minArguments} to ${maxArguments} arguments`,
               );
               return ["Error"];
             }
             const args = node.args.map((arg, index) => infer(arg, `${path}.args[${index}]`));
-            const converted = signature.parameters.map((parameter, index) =>
+            const parameters = [
+              ...signature.parameters,
+              ...(signature.optionalParameters ?? []),
+            ].slice(0, node.args.length);
+            const converted = parameters.map((parameter, index) =>
               parameter === "Value"
                 ? args[index]!
                 : conversion(node.args[index]!, args[index]!, parameter, `${path}.args[${index}]`),
@@ -222,23 +236,20 @@ export const analyzeFormulaTypes = (
             const result: FormulaType[] = [];
             if (
               converted.some(
-                (types, index) =>
-                  signature.parameters[index] !== "Value" && types.includes("Error"),
+                (types, index) => parameters[index] !== "Value" && types.includes("Error"),
               )
             )
               result.push("Error");
             if (
               converted.some(
-                (types, index) =>
-                  signature.parameters[index] !== "Value" && types.includes("Unknown"),
+                (types, index) => parameters[index] !== "Value" && types.includes("Unknown"),
               )
             )
               result.push("Unknown");
             if (
               converted.every(
                 (types, index) =>
-                  signature.parameters[index] === "Value" ||
-                  types.includes(signature.parameters[index] as FormulaType),
+                  parameters[index] === "Value" || types.includes(parameters[index] as FormulaType),
               )
             )
               result.push(signature.returns);

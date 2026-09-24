@@ -3,8 +3,9 @@ export type FormulaType = "Blank" | "Number" | "Text" | "Boolean" | "Error" | "R
 /** Conversion contract assumed by static analysis; custom functions must honor it themselves. */
 export type FunctionParameterType = "Number" | "Boolean" | "Text" | "Value";
 
-/** An exact-arity signature for analysis; the runtime function remains authoritative. */
+/** A signature with required and optional trailing arguments; the runtime remains authoritative. */
 export interface FunctionSignature {
   readonly parameters: readonly FunctionParameterType[];
+  readonly optionalParameters?: readonly FunctionParameterType[];
   readonly returns: FormulaType;
 }

@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeFormulaTypes,
   blank,
+  bool,
   configureFunctions,
+  error,
   FunctionRegistry,
   number,
   parseSync,
@@ -198,6 +200,38 @@ describe("AST type analysis", () => {
     });
   });
 
+  it("analyzes built-ins with optional trailing arguments", () => {
+    expect(analyze('=LEFT("hello")')).toEqual({ types: ["Text"], diagnostics: [] });
+    expect(analyze('=RIGHT("hello";2)')).toEqual({ types: ["Text"], diagnostics: [] });
+    expect(analyze('=FIND("e";"hello";2)')).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=ROUND(LOG(100);1)+TRUNC(2.5;0)")).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze('=LEFT("hello";"bad")')).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        {
+          path: "root.args[1]",
+          severity: "definite",
+          message: "Cannot guarantee conversion to Number",
+        },
+      ],
+    });
+    expect(analyze('=FIND("e")')).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        { path: "root", severity: "definite", message: "FIND expects 2 to 3 arguments" },
+      ],
+    });
+    expect(analyze("=ROUND(1;2;3)")).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        { path: "root", severity: "definite", message: "ROUND expects 1 to 2 arguments" },
+      ],
+    });
+  });
+
   it("analyzes numeric aggregates with direct and referenced conversion rules", () => {
     expect(analyze('=SUM(1;"2";TRUE())')).toEqual({ types: ["Number"], diagnostics: [] });
     expect(analyze('=SUM("bad")')).toEqual({
@@ -257,10 +291,13 @@ describe("AST type analysis", () => {
           );
         },
         ABS: ([value]) => Effect.succeed(toText(scalar(value ?? blank))),
+        OPTIONAL: (args) =>
+          Effect.succeed(args.length >= 1 && args.length <= 2 ? bool(true) : error("#VALUE!")),
       },
       signatures: {
         double: { parameters: ["Number"], returns: "Number" },
         abs: { parameters: ["Text"], returns: "Text" },
+        optional: { parameters: ["Number"], optionalParameters: ["Text"], returns: "Boolean" },
       },
       remove: ["LEN"],
     });
@@ -274,6 +311,9 @@ describe("AST type analysis", () => {
         ),
         yield* analyzeFormulaTypes(parseSync("=ABS(1)"), {}, registry),
         yield* analyzeFormulaTypes(parseSync("=LEN(1)"), {}, registry),
+        yield* analyzeFormulaTypes(parseSync('=OPTIONAL(1;"x")'), {}, registry),
+        yield* analyzeFormulaTypes(parseSync("=OPTIONAL(1)"), {}, registry),
+        yield* analyzeFormulaTypes(parseSync("=OPTIONAL()"), {}, registry),
       ];
     }).pipe(Effect.provide(profile));
     expect(Effect.runSync(results)).toEqual([
@@ -289,6 +329,14 @@ describe("AST type analysis", () => {
       },
       { types: ["Text"], diagnostics: [] },
       { types: ["Error"], diagnostics: [] },
+      { types: ["Boolean"], diagnostics: [] },
+      { types: ["Boolean"], diagnostics: [] },
+      {
+        types: ["Error"],
+        diagnostics: [
+          { path: "root", severity: "definite", message: "OPTIONAL expects 1 to 2 arguments" },
+        ],
+      },
     ]);
   });
 });
