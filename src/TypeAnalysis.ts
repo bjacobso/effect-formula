@@ -1,7 +1,7 @@
 import { Effect, Option } from "effect";
 import type { FunctionRegistryService } from "./Engine.js";
 import type { FormulaType, FunctionSignature } from "./FunctionSignature.js";
-import type { Ast } from "./Parser.js";
+import type { Ast, SourceSpan } from "./Parser.js";
 import { isError, toNumber } from "./Value.js";
 
 const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
@@ -15,6 +15,7 @@ export interface TypeDiagnostic {
   readonly path: string;
   readonly severity: "definite" | "possible";
   readonly message: string;
+  readonly span?: SourceSpan;
 }
 export interface FormulaTypeAnalysis {
   /** Possible result categories. Numeric overflow and other value-dependent errors are not enumerated. */
@@ -30,6 +31,14 @@ export const analyzeFormulaTypes = (
 ): Effect.Effect<FormulaTypeAnalysis> =>
   Effect.sync(() => {
     const diagnostics: TypeDiagnostic[] = [];
+    const report = (
+      node: Ast,
+      path: string,
+      severity: TypeDiagnostic["severity"],
+      message: string,
+    ): void => {
+      diagnostics.push({ path, severity, message, ...(node.span ? { span: node.span } : {}) });
+    };
     const unique = (types: readonly FormulaType[]): readonly FormulaType[] => [...new Set(types)];
     const conversion = (
       node: Ast,
@@ -59,11 +68,12 @@ export const analyzeFormulaTypes = (
         } else result.push(target);
       }
       if (definite || possible)
-        diagnostics.push({
+        report(
+          node,
           path,
-          severity: possible || result.some((type) => type === target) ? "possible" : "definite",
-          message: `Cannot guarantee conversion to ${target}`,
-        });
+          possible || result.some((type) => type === target) ? "possible" : "definite",
+          `Cannot guarantee conversion to ${target}`,
+        );
       return unique(result);
     };
     const infer = (node: Ast, path: string): readonly FormulaType[] => {
@@ -75,11 +85,7 @@ export const analyzeFormulaTypes = (
         case "Reference": {
           const declared = Option.fromNullable(inputTypes[node.key]);
           if (Option.isSome(declared)) return [declared.value];
-          diagnostics.push({
-            path,
-            severity: "possible",
-            message: `No declared type for ${node.key}`,
-          });
+          report(node, path, "possible", `No declared type for ${node.key}`);
           return ["Unknown"];
         }
         case "Range":
@@ -113,11 +119,12 @@ export const analyzeFormulaTypes = (
             )
               result.push(resultType);
             if (left.includes("Range") || right.includes("Range"))
-              diagnostics.push({
+              report(
+                left.includes("Range") ? node.left : node.right,
                 path,
-                severity: result.includes(resultType) ? "possible" : "definite",
-                message: "A range cannot be used as a scalar",
-              });
+                result.includes(resultType) ? "possible" : "definite",
+                "A range cannot be used as a scalar",
+              );
             return unique(result);
           }
           const numericLeft = conversion(node.left, left, "Number", leftPath);
@@ -139,11 +146,12 @@ export const analyzeFormulaTypes = (
             : builtInSignatures[node.name];
           if (signature) {
             if (node.args.length !== signature.parameters.length) {
-              diagnostics.push({
+              report(
+                node,
                 path,
-                severity: "definite",
-                message: `${node.name} expects ${signature.parameters.length} argument${signature.parameters.length === 1 ? "" : "s"}`,
-              });
+                "definite",
+                `${node.name} expects ${signature.parameters.length} argument${signature.parameters.length === 1 ? "" : "s"}`,
+              );
               return ["Error"];
             }
             const converted = signature.parameters.map((parameter, index) =>
@@ -181,11 +189,7 @@ export const analyzeFormulaTypes = (
             return node.args.length === 0 ? ["Boolean"] : ["Error"];
           if (node.name !== "IF") return ["Unknown"];
           if (node.args.length < 1 || node.args.length > 3) {
-            diagnostics.push({
-              path,
-              severity: "definite",
-              message: "IF expects one to three arguments",
-            });
+            report(node, path, "definite", "IF expects one to three arguments");
             return ["Error"];
           }
           const condition = conversion(node.args[0]!, args[0]!, "Boolean", `${path}.args[0]`);

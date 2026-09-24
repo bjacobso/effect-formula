@@ -9,15 +9,24 @@ export interface ParseOptions {
   readonly maxLength?: number;
   readonly maxDepth?: number;
   readonly currentSheet?: string;
+  readonly captureSpans?: boolean;
 }
-export type Ast =
+export interface SourceSpan {
+  /** Zero-based UTF-16 offsets into the original formula; end is exclusive. */
+  readonly start: number;
+  readonly end: number;
+}
+export type Ast = {
+  readonly span?: SourceSpan;
+} & (
   | { readonly _tag: "Missing" }
   | { readonly _tag: "Literal"; readonly value: Scalar }
   | { readonly _tag: "Reference"; readonly key: string }
   | { readonly _tag: "Range"; readonly start: string; readonly end: string }
   | { readonly _tag: "Unary"; readonly operator: "+" | "-" | "%"; readonly value: Ast }
   | { readonly _tag: "Binary"; readonly operator: string; readonly left: Ast; readonly right: Ast }
-  | { readonly _tag: "Call"; readonly name: string; readonly args: readonly Ast[] };
+  | { readonly _tag: "Call"; readonly name: string; readonly args: readonly Ast[] }
+);
 export class ParseError extends Data.TaggedError("ParseError")<{
   readonly message: string;
   readonly offset: number;
@@ -34,6 +43,7 @@ interface Token {
     | "eof";
   readonly value: string;
   readonly offset: number;
+  readonly end: number;
 }
 const cellPattern = /^\$?[A-Z]+\$?[1-9][0-9]*$/i;
 function odfAddress(part: string, localSheet: Option.Option<string>, offset: number): string {
@@ -113,14 +123,14 @@ function lex(source: string): Token[] {
     const rest = source.slice(i);
     const constantError = /^#(?:DIV\/0!|VALUE!|REF!|NAME\?|NUM!|CYCLE!|N\/A|NULL!)/.exec(rest);
     if (constantError) {
-      tokens.push({ kind: "error", value: constantError[0], offset });
       i += constantError[0].length;
+      tokens.push({ kind: "error", value: constantError[0], offset, end: i });
       continue;
     }
     const numeric = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?/.exec(rest);
     if (numeric) {
-      tokens.push({ kind: "number", value: numeric[0], offset });
       i += numeric[0].length;
+      tokens.push({ kind: "number", value: numeric[0], offset, end: i });
       continue;
     }
     if (source[i] === '"') {
@@ -141,7 +151,7 @@ function lex(source: string): Token[] {
         value += source[i++];
       }
       if (!closed) throw new ParseError({ message: "Unclosed string", offset });
-      tokens.push({ kind: "string", value, offset });
+      tokens.push({ kind: "string", value, offset, end: i });
       continue;
     }
     if (source[i] === "[") {
@@ -161,31 +171,31 @@ function lex(source: string): Token[] {
         throw new ParseError({ message: "Unclosed field reference", offset });
       const value = source.slice(i + 1, end);
       if (/\.(?:\$?[A-Z][A-Z0-9$]*|\$?[0-9]+)(?::|$)/.test(value) || value === "#REF!") {
-        tokens.push({ kind: "odfReference", value, offset });
         i = end + 1;
+        tokens.push({ kind: "odfReference", value, offset, end: i });
         continue;
       }
       if (!/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(value))
         throw new ParseError({ message: "Invalid field key", offset });
-      tokens.push({ kind: "field", value, offset });
       i = end + 1;
+      tokens.push({ kind: "field", value, offset, end: i });
       continue;
     }
     const word = /^(?:\$\$|\$)?[A-Za-z_][A-Za-z0-9_.$]*/.exec(rest);
     if (word) {
-      tokens.push({ kind: "word", value: word[0], offset });
       i += word[0].length;
+      tokens.push({ kind: "word", value: word[0], offset, end: i });
       continue;
     }
     const symbol = /^(?:<=|>=|<>|[+\-*/^&=<>():;,%!])/.exec(rest);
     if (symbol) {
-      tokens.push({ kind: "symbol", value: symbol[0], offset });
       i += symbol[0].length;
+      tokens.push({ kind: "symbol", value: symbol[0], offset, end: i });
       continue;
     }
     throw new ParseError({ message: `Unexpected character ${source[i]}`, offset });
   }
-  tokens.push({ kind: "eof", value: "", offset: i });
+  tokens.push({ kind: "eof", value: "", offset: i, end: i });
   return tokens;
 }
 const precedence: Readonly<Record<string, number>> = {
@@ -212,7 +222,15 @@ class Reader {
     readonly maxDepth: number,
     readonly dialect: Dialect,
     readonly currentSheet: Option.Option<string>,
+    readonly captureSpans: boolean,
+    readonly sourceOffset: number,
   ) {}
+  span<T extends Ast>(node: T, start: number, end: number): T {
+    return this.captureSpans ? { ...node, span: { start, end } } : node;
+  }
+  get previousEnd(): number {
+    return this.tokens[this.index - 1]!.end + this.sourceOffset;
+  }
   get current(): Token {
     return this.tokens[this.index]!;
   }
@@ -236,7 +254,11 @@ class Reader {
       const op = this.current.value;
       if (op === "%" && 7 >= min) {
         this.index++;
-        left = { _tag: "Unary", operator: "%", value: left };
+        left = this.span(
+          { _tag: "Unary", operator: "%", value: left },
+          left.span?.start ?? 0,
+          this.previousEnd,
+        );
         continue;
       }
       if (op === ":" && 7 >= min) {
@@ -253,7 +275,11 @@ class Reader {
         const b = parseAddress(right.key);
         if (Option.isNone(a) || Option.isNone(b) || !sameSheet(a.value, b.value))
           this.fail("Range endpoints must be on the same sheet");
-        left = { _tag: "Range", start: left.key, end: right.key };
+        left = this.span(
+          { _tag: "Range", start: left.key, end: right.key },
+          left.span?.start ?? 0,
+          this.previousEnd,
+        );
         continue;
       }
       const precedenceOption = Option.fromNullable(precedence[op]);
@@ -261,36 +287,59 @@ class Reader {
       const p = precedenceOption.value;
       this.index++;
       const right = this.expression(op === "^" && this.dialect === "excel" ? p : p + 1);
-      left = { _tag: "Binary", operator: op, left, right };
+      left = this.span(
+        { _tag: "Binary", operator: op, left, right },
+        left.span?.start ?? 0,
+        this.previousEnd,
+      );
     }
     this.depth--;
     return left;
   }
   primary(): Ast {
     const token = this.current;
+    const start = token.offset + this.sourceOffset;
     if (token.kind === "eof") this.fail("Expected expression");
     const prefixPrecedence = this.dialect === "openformula" ? 8 : 5;
     if (this.take("+"))
-      return { _tag: "Unary", operator: "+", value: this.expression(prefixPrecedence) };
+      return this.span(
+        { _tag: "Unary", operator: "+", value: this.expression(prefixPrecedence) },
+        start,
+        this.previousEnd,
+      );
     if (this.take("-"))
-      return { _tag: "Unary", operator: "-", value: this.expression(prefixPrecedence) };
+      return this.span(
+        { _tag: "Unary", operator: "-", value: this.expression(prefixPrecedence) },
+        start,
+        this.previousEnd,
+      );
     if (this.take("(")) {
       const value = this.expression();
       this.need(")");
-      return value;
+      return this.span(value, start, this.previousEnd);
     }
     this.index++;
     if (token.kind === "number") {
       const value = number(Number(token.value));
       if (value._tag === "Error") this.fail("Numeric literal is not finite");
-      return { _tag: "Literal", value };
+      return this.span({ _tag: "Literal", value }, start, this.previousEnd);
     }
-    if (token.kind === "string") return { _tag: "Literal", value: text(token.value) };
+    if (token.kind === "string")
+      return this.span({ _tag: "Literal", value: text(token.value) }, start, this.previousEnd);
     if (token.kind === "error")
-      return { _tag: "Literal", value: error(token.value as Parameters<typeof error>[0]) };
+      return this.span(
+        { _tag: "Literal", value: error(token.value as Parameters<typeof error>[0]) },
+        start,
+        this.previousEnd,
+      );
     if (token.kind === "odfReference")
-      return odfReference(token.value, this.currentSheet, token.offset);
-    if (token.kind === "field") return { _tag: "Reference", key: `field:${token.value}` };
+      return this.span(
+        odfReference(token.value, this.currentSheet, token.offset),
+        start,
+        this.previousEnd,
+      );
+    if (token.kind === "field")
+      return this.span({ _tag: "Reference", key: `field:${token.value}` }, start, this.previousEnd);
     if (token.kind === "word") {
       const word = token.value.toUpperCase();
       if (this.take("(")) {
@@ -299,24 +348,36 @@ class Reader {
           while (true) {
             args.push(
               this.current.value === this.separator || this.current.value === ")"
-                ? { _tag: "Missing" }
+                ? this.span(
+                    { _tag: "Missing" },
+                    this.current.offset + this.sourceOffset,
+                    this.current.offset + this.sourceOffset,
+                  )
                 : this.expression(),
             );
             if (this.take(")")) break;
             this.need(this.separator);
           }
         }
-        return { _tag: "Call", name: word, args };
+        return this.span({ _tag: "Call", name: word, args }, start, this.previousEnd);
       }
       if (word === "TRUE" || word === "FALSE")
-        return { _tag: "Literal", value: bool(word === "TRUE") };
+        return this.span(
+          { _tag: "Literal", value: bool(word === "TRUE") },
+          start,
+          this.previousEnd,
+        );
       if (cellPattern.test(word))
-        return {
-          _tag: "Reference",
-          key: addressKey("cell", word.replaceAll("$", ""), this.currentSheet),
-        };
+        return this.span(
+          {
+            _tag: "Reference",
+            key: addressKey("cell", word.replaceAll("$", ""), this.currentSheet),
+          },
+          start,
+          this.previousEnd,
+        );
       const name = word.startsWith("$$") ? word.slice(2) : word;
-      return { _tag: "Reference", key: `name:${name}` };
+      return this.span({ _tag: "Reference", key: `name:${name}` }, start, this.previousEnd);
     }
     this.fail("Expected expression");
   }
@@ -329,12 +390,15 @@ export function parseSync(formula: string, options: ParseOptions = {}): Ast {
     : formula.startsWith("=")
       ? formula.slice(1)
       : formula;
+  const sourceOffset = formula.length - source.length;
   const reader = new Reader(
     lex(source),
     options.dialect === "excel" ? "," : ";",
     options.maxDepth ?? 100,
     options.dialect ?? "openformula",
     Option.fromNullable(options.currentSheet),
+    options.captureSpans === true,
+    sourceOffset,
   );
   const ast = reader.expression();
   if (reader.current.kind !== "eof") reader.fail("Unexpected token");

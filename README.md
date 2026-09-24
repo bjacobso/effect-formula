@@ -44,7 +44,7 @@ For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` a
 import { Effect, Schema } from "effect"
 import { analyzeFormulaTypes, formulaInputSchema, formulaInputs, parse } from "effect-formula"
 
-const ast = await Effect.runPromise(parse("=[price]*[quantity]"))
+const ast = await Effect.runPromise(parse("=[price]*[quantity]", { captureSpans: true }))
 const inputs = await Effect.runPromise(formulaInputs(ast))
 // ["field:price", "field:quantity"]
 
@@ -64,7 +64,7 @@ const analysis = await Effect.runPromise(analyzeFormulaTypes(ast, {
 // { types: ["Number"], diagnostics: [] }
 ```
 
-The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, `IF`, and functions with known signatures. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Functions without a signature and undeclared references return `Unknown`. This pass does not replace runtime validation or evaluation. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
+The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, `IF`, and functions with known signatures. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Functions without a signature and undeclared references return `Unknown`. With `captureSpans: true`, each AST node and type diagnostic has a source span. Offsets are zero-based UTF-16 positions in the original formula, including any leading `=`; the end is exclusive. Parsing without this option keeps the existing compact AST shape. This pass does not replace runtime validation or evaluation. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
 
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 

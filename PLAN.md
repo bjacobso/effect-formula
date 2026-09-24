@@ -14,13 +14,14 @@ Status: in progress. The first executable slice is implemented; the checklist be
 ## Phase 1 — one-shot evaluator
 
 - [x] Define tagged formula values, formula errors, typed operational failures, schemas, and AST nodes.
-- [x] Implement tokenizer and parser with error offsets and an explicit dialect option. Full source spans remain to do.
+- [x] Implement tokenizer and parser with error offsets, an explicit dialect option, and opt-in AST source spans.
 - [x] Implement central conversions and operators, then the first functions from SPEC section 7.
 - [x] Define Effect services for reference resolution and custom functions. Provide an in-memory resolver and spreadsheet/form adapters.
 - [x] Expose parse and evaluate APIs with examples for a cell range and a form field.
 - [x] Expose AST input extraction, host-supplied input schemas, and a first type analysis pass for operators and `IF`.
 - [x] Add exact-arity function signature metadata for registered functions and an initial set of built-ins.
-- [ ] Expand audited function signatures and add source spans so type diagnostics can cover more calls and point to formula text.
+- [x] Include source spans in type diagnostics when parsing with `captureSpans`.
+- [ ] Expand audited function signatures so type diagnostics cover more calls.
 
 **Exit:** both examples run against the same core; table-driven tests cover precedence, coercion, blank/error behavior, ranges, and `IF` branch laziness. Unsupported syntax fails clearly.
 
