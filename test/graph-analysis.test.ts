@@ -66,6 +66,22 @@ describe("formula graph type analysis", () => {
     expect(graph.formulas.get("field:after")?.types).toEqual(["Number"]);
   });
 
+  it("propagates built-in function types through formula dependencies", async () => {
+    const graph = await Effect.runPromise(
+      analyzeFormulaGraph(
+        new Map([
+          ["field:root", parseSync("=SQRT([length])")],
+          ["field:length", parseSync("=LEN([trimmed])")],
+          ["field:trimmed", parseSync("=TRIM([name])")],
+        ]),
+        { "field:name": "Text" },
+      ),
+    );
+    expect(graph.formulas.get("field:trimmed")).toEqual({ types: ["Text"], diagnostics: [] });
+    expect(graph.formulas.get("field:length")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(graph.formulas.get("field:root")).toEqual({ types: ["Number"], diagnostics: [] });
+  });
+
   it("propagates IFERROR and CHOOSE result categories", async () => {
     const graph = await Effect.runPromise(
       analyzeFormulaGraph(

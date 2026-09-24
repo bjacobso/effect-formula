@@ -162,6 +162,42 @@ describe("AST type analysis", () => {
     });
   });
 
+  it("analyzes fixed-arity math and text functions", () => {
+    expect(analyze("=SQRT(POWER(3;2))")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze('=EXACT(TRIM(" a ");MID("abc";1;1))')).toEqual({
+      types: ["Boolean"],
+      diagnostics: [],
+    });
+    expect(analyze('=MOD("bad";2)')).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        {
+          path: "root.args[0]",
+          severity: "definite",
+          message: "Cannot guarantee conversion to Number",
+        },
+      ],
+    });
+    expect(analyze('=MID("abc";1)')).toEqual({
+      types: ["Error"],
+      diagnostics: [{ path: "root", severity: "definite", message: "MID expects 3 arguments" }],
+    });
+  });
+
+  it("keeps error-inspection results Boolean", () => {
+    expect(analyze("=ISERROR(NA())")).toEqual({ types: ["Boolean"], diagnostics: [] });
+    expect(analyze("=ISNA(#N/A)")).toEqual({ types: ["Boolean"], diagnostics: [] });
+    expect(analyze("=ISNUMBER([value])", { "field:value": ["Number", "Error"] })).toEqual({
+      types: ["Boolean"],
+      diagnostics: [],
+    });
+    expect(analyze("=PI()")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=PI(1)")).toEqual({
+      types: ["Error"],
+      diagnostics: [{ path: "root", severity: "definite", message: "PI expects 0 arguments" }],
+    });
+  });
+
   it("analyzes numeric aggregates with direct and referenced conversion rules", () => {
     expect(analyze('=SUM(1;"2";TRUE())')).toEqual({ types: ["Number"], diagnostics: [] });
     expect(analyze('=SUM("bad")')).toEqual({
