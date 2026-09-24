@@ -22,11 +22,12 @@ export interface FormulaTypeAnalysis {
   readonly types: readonly FormulaType[];
   readonly diagnostics: readonly TypeDiagnostic[];
 }
+export type FormulaInputType = FormulaType | readonly FormulaType[];
 
 /** Analyze supported AST operations against host-declared reference types. */
 export const analyzeFormulaTypes = (
   ast: Ast,
-  inputTypes: Readonly<Record<string, FormulaType>>,
+  inputTypes: Readonly<Record<string, FormulaInputType>>,
   registry?: FunctionRegistryService,
 ): Effect.Effect<FormulaTypeAnalysis> =>
   Effect.sync(() => {
@@ -84,7 +85,8 @@ export const analyzeFormulaTypes = (
           return [node.value._tag];
         case "Reference": {
           const declared = Option.fromNullable(inputTypes[node.key]);
-          if (Option.isSome(declared)) return [declared.value];
+          if (Option.isSome(declared))
+            return typeof declared.value === "string" ? [declared.value] : declared.value;
           report(node, path, "possible", `No declared type for ${node.key}`);
           return ["Unknown"];
         }

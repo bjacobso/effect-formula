@@ -66,6 +66,26 @@ const analysis = await Effect.runPromise(analyzeFormulaTypes(ast, {
 
 The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, `IF`, and functions with known signatures. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Functions without a signature and undeclared references return `Unknown`. With `captureSpans: true`, each AST node and type diagnostic has a source span. Offsets are zero-based UTF-16 positions in the original formula, including any leading `=`; the end is exclusive. Parsing without this option keeps the existing compact AST shape. This pass does not replace runtime validation or evaluation. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `formulaInputs(ast, { grid: { rows, columns } })`. Unexpandable ranges fail with `FormulaAnalysisError`.
 
+For several formulas, `analyzeFormulaGraph` resolves formula references in dependency order and passes each formula's possible types to its dependents:
+
+```ts
+import { Effect } from "effect"
+import { analyzeFormulaGraph, parseSync } from "effect-formula"
+
+const formulas = new Map([
+  ["field:subtotal", parseSync("=[price]*[quantity]", { captureSpans: true })],
+  ["field:total", parseSync("=[subtotal]+[tax]", { captureSpans: true })],
+])
+const graph = await Effect.runPromise(analyzeFormulaGraph(formulas, {
+  "field:price": "Number",
+  "field:quantity": "Number",
+  "field:tax": "Number",
+}))
+// graph.formulas.get("field:total")?.types is ["Number"]
+```
+
+The result includes dependencies and cycles. A cycle gives its members an `Error` result and a diagnostic. Analysis includes references in every branch, so it may report a cycle that runtime `IF` skips. Function results without signatures remain `Unknown`. Range expansion uses the same grid and size limits as `formulaInputs`.
+
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 
 Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains cell keys, while `None` means the address is invalid or exceeds the configured range limit. Formula evaluation still returns tagged formula values, including errors; operational failures stay in Effect's error channel. Optional configuration fields remain ordinary TypeScript optional inputs.
