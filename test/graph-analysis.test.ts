@@ -82,6 +82,20 @@ describe("formula graph type analysis", () => {
     expect(graph.formulas.get("field:root")).toEqual({ types: ["Number"], diagnostics: [] });
   });
 
+  it("propagates VALUE conversion uncertainty through formula dependencies", async () => {
+    const graph = await Effect.runPromise(
+      analyzeFormulaGraph(
+        new Map([
+          ["field:total", parseSync("=[parsed]+1")],
+          ["field:parsed", parseSync("=VALUE([input])")],
+        ]),
+        { "field:input": "Text" },
+      ),
+    );
+    expect(graph.formulas.get("field:parsed")?.types).toEqual(["Number", "Error"]);
+    expect(graph.formulas.get("field:total")?.types).toEqual(["Error", "Number"]);
+  });
+
   it("propagates IFERROR and CHOOSE result categories", async () => {
     const graph = await Effect.runPromise(
       analyzeFormulaGraph(

@@ -232,6 +232,40 @@ describe("AST type analysis", () => {
     });
   });
 
+  it("analyzes category-dependent conversion and dimension functions", () => {
+    expect(analyze("=N(TRUE())")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=N([value])", { "field:value": ["Number", "Error"] })).toEqual({
+      types: ["Number", "Error"],
+      diagnostics: [],
+    });
+    expect(analyze("=T([value])", { "field:value": ["Text", "Error"] })).toEqual({
+      types: ["Text", "Error"],
+      diagnostics: [],
+    });
+    expect(analyze('=VALUE("12")')).toEqual({ types: ["Number", "Error"], diagnostics: [] });
+    expect(analyze("=VALUE(#N/A)")).toEqual({ types: ["Error"], diagnostics: [] });
+    expect(analyze("=ROWS(A1:A3)")).toEqual({ types: ["Number"], diagnostics: [] });
+    expect(analyze("=COLUMNS([values])", { "field:values": "Range" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(analyze("=ROWS(#N/A)")).toEqual({ types: ["Error"], diagnostics: [] });
+    expect(analyze("=N(A1:A2)")).toEqual({
+      types: ["Error"],
+      diagnostics: [
+        {
+          path: "root.args[0]",
+          severity: "definite",
+          message: "A range cannot be used as a scalar",
+        },
+      ],
+    });
+    expect(analyze("=T()")).toEqual({
+      types: ["Error"],
+      diagnostics: [{ path: "root", severity: "definite", message: "T expects 1 argument" }],
+    });
+  });
+
   it("analyzes numeric aggregates with direct and referenced conversion rules", () => {
     expect(analyze('=SUM(1;"2";TRUE())')).toEqual({ types: ["Number"], diagnostics: [] });
     expect(analyze('=SUM("bad")')).toEqual({

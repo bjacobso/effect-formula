@@ -259,6 +259,43 @@ export const analyzeFormulaTypes = (
             for (const [index, arg] of node.args.entries()) infer(arg, `${path}.args[${index}]`);
             return ["Unknown"];
           }
+          if (["N", "T", "VALUE", "ROWS", "COLUMNS"].includes(node.name)) {
+            if (node.args.length !== 1) {
+              report(node, path, "definite", `${node.name} expects 1 argument`);
+              return ["Error"];
+            }
+            const arg = node.args[0]!;
+            const argPath = `${path}.args[0]`;
+            const types = infer(arg, argPath);
+            if (node.name === "VALUE") {
+              const converted = conversion(arg, types, "Text", argPath);
+              return unique(
+                converted.flatMap((type): readonly FormulaType[] =>
+                  type === "Text" ? ["Number", "Error"] : [type],
+                ),
+              );
+            }
+            const dimension = node.name === "ROWS" || node.name === "COLUMNS";
+            if (!dimension && types.includes("Range"))
+              report(
+                arg,
+                argPath,
+                types.length === 1 ? "definite" : "possible",
+                "A range cannot be used as a scalar",
+              );
+            return unique(
+              types.map(
+                (type): FormulaType =>
+                  type === "Error" || type === "Unknown"
+                    ? type
+                    : type === "Range" && !dimension
+                      ? "Error"
+                      : node.name === "T"
+                        ? "Text"
+                        : "Number",
+              ),
+            );
+          }
           if (
             ["SUM", "AVERAGE", "MIN", "MAX", "COUNT", "COUNTA", "COUNTBLANK"].includes(node.name)
           ) {
