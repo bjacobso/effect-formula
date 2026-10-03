@@ -15,23 +15,25 @@ Supported examples include `=SUM(A1:A5)` in a spreadsheet and `=IF([quantity]>0;
 
 ## Use
 
-Requires Node 22 or newer. Run `pnpm install` and `pnpm check` to build and verify the package.
+Requires Node 22 or newer. Run `pnpm install` and `pnpm check` to build and verify the package. Public operations return `Effect` values; compose them into a program and provide required services once, then run the program at your application's boundary.
 
 ```ts
 import { Effect, Layer } from "effect"
 import { createSession, emptyFunctions, memory, number } from "effect-formula"
 
 const services = Layer.merge(memory(new Map()), emptyFunctions)
-const session = await Effect.runPromise(createSession().pipe(Effect.provide(services)))
+const program = Effect.gen(function* () {
+  const session = yield* createSession()
+  yield* session.update([
+    { _tag: "Input", key: "field:quantity", value: number(3) },
+    { _tag: "Input", key: "field:price", value: number(12) },
+    { _tag: "Formula", key: "field:total", formula: "=[quantity]*[price]" },
+  ])
+  return yield* session.get("field:total")
+}).pipe(Effect.provide(services))
 
-await Effect.runPromise(session.update([
-  { _tag: "Input", key: "field:quantity", value: number(3) },
-  { _tag: "Input", key: "field:price", value: number(12) },
-  { _tag: "Formula", key: "field:total", formula: "=[quantity]*[price]" },
-]))
-
-console.log(await Effect.runPromise(session.get("field:total")))
-// { _tag: "Number", value: 36 }
+const total = await Effect.runPromise(program)
+console.log(total) // { _tag: "Number", value: 36 }
 ```
 
 For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
@@ -44,24 +46,28 @@ For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` a
 import { Effect, Schema } from "effect"
 import { analyzeFormulaTypes, formulaInputSchema, formulaInputs, parse } from "effect-formula"
 
-const ast = await Effect.runPromise(parse("=[price]*[quantity]", { captureSpans: true }))
-const inputs = await Effect.runPromise(formulaInputs(ast))
-// ["field:price", "field:quantity"]
+const program = Effect.gen(function* () {
+  const ast = yield* parse("=[price]*[quantity]", { captureSpans: true })
+  const inputs = yield* formulaInputs(ast)
+  const schema = yield* formulaInputSchema(ast, {
+    "field:price": Schema.Number,
+    "field:quantity": Schema.Number,
+  })
+  const values = yield* Schema.decodeUnknown(schema)({
+    "field:price": 12,
+    "field:quantity": 3,
+  })
+  const analysis = yield* analyzeFormulaTypes(ast, {
+    "field:price": "Number",
+    "field:quantity": "Number",
+  })
+  return { inputs, values, analysis }
+})
 
-const schema = await Effect.runPromise(formulaInputSchema(ast, {
-  "field:price": Schema.Number,
-  "field:quantity": Schema.Number,
-}))
-const values = await Effect.runPromise(Schema.decodeUnknown(schema)({
-  "field:price": 12,
-  "field:quantity": 3,
-}))
-
-const analysis = await Effect.runPromise(analyzeFormulaTypes(ast, {
-  "field:price": "Number",
-  "field:quantity": "Number",
-}))
-// { types: ["Number"], diagnostics: [] }
+const result = await Effect.runPromise(program)
+// result.inputs: ["field:price", "field:quantity"]
+// result.values: { "field:price": 12, "field:quantity": 3 }
+// result.analysis: { types: ["Number"], diagnostics: [] }
 ```
 
 The host supplies a schema for every referenced key. `analyzeFormulaTypes` separately uses host-declared value categories to analyze literals, references, arithmetic, comparisons, `IF`, `IFERROR`, `CHOOSE`, numeric aggregates, and functions with known signatures. It returns possible result categories and diagnostics; a Text reference in arithmetic may convert or fail, while an invalid Text literal definitely fails. Numeric aggregates use the engine's direct-value and reference conversion rules, and inspect declared types of cells in ranges. `AVERAGE` can return an Error when no Number is present. It narrows known choices and includes all possible branches for dynamic choices. Because arithmetic can fail from values such as division by zero, an `IFERROR` fallback remains possible unless the first argument is a known successful literal. Functions without a signature and undeclared references return `Unknown`. With `captureSpans: true`, each AST node and type diagnostic has a source span. Offsets are zero-based UTF-16 positions in the original formula, including any leading `=`; the end is exclusive. Parsing without this option keeps the existing compact AST shape. This pass does not replace runtime validation or evaluation. The generated schema validates the host's input object; the host still converts accepted inputs into tagged formula values before evaluation. Whole-row and whole-column ranges require `{ grid: { rows, columns } }` in the third analysis argument or in `formulaInputs` options. Unexpandable ranges fail with `FormulaAnalysisError` in input and graph analysis.
@@ -76,11 +82,12 @@ const formulas = new Map([
   ["field:subtotal", parseSync("=[price]*[quantity]", { captureSpans: true })],
   ["field:total", parseSync("=[subtotal]+[tax]", { captureSpans: true })],
 ])
-const graph = await Effect.runPromise(analyzeFormulaGraph(formulas, {
+const program = analyzeFormulaGraph(formulas, {
   "field:price": "Number",
   "field:quantity": "Number",
   "field:tax": "Number",
-}))
+})
+const graph = await Effect.runPromise(program)
 // graph.formulas.get("field:total")?.types is ["Number"]
 ```
 
@@ -97,8 +104,8 @@ Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains 
 Use `configureFunctions` to add Effect functions, override a built-in, or remove a function from a host's formula language. Names are case-insensitive. The profile is fixed when an evaluation or session receives its Effect layer.
 
 ```ts
-import { Effect, Layer } from "effect"
-import { configureFunctions, memory, number } from "effect-formula"
+import { Effect } from "effect"
+import { configureFunctions, createSpreadsheet, number } from "effect-formula"
 
 const functions = configureFunctions({
   register: {
@@ -109,7 +116,13 @@ const functions = configureFunctions({
   },
   remove: ["NOW", "TODAY"],
 })
-const services = Layer.merge(memory(new Map()), functions)
+const program = Effect.gen(function* () {
+  const sheet = yield* createSpreadsheet()
+  yield* sheet.set({ A1: number(7), B1: { formula: "=TRIPLE(A1)" } })
+  return yield* sheet.get("B1")
+}).pipe(Effect.provide(functions))
+const triple = await Effect.runPromise(program)
+console.log(triple) // { _tag: "Number", value: 21 }
 ```
 
 Provide `functions` to `createSpreadsheet()` or `createForm(fields)` to use the profile in a host adapter. The `spreadsheet()` and `form(fields)` shortcuts use the default function set. Registered functions receive evaluated arguments. An override of a lazy built-in such as `IF` receives all evaluated arguments; the built-in retains its lazy behavior when not overridden. A removed name returns `#NAME?`, even if also registered.
@@ -124,17 +137,24 @@ Signatures are optional metadata for `analyzeFormulaTypes`. They describe requir
 import { Effect } from "effect"
 import { form, number, spreadsheet } from "effect-formula"
 
-const sheet = await Effect.runPromise(spreadsheet())
-await Effect.runPromise(sheet.set({ A1: number(2), B1: { formula: "=A1*3" } }))
-console.log(await Effect.runPromise(sheet.get("B1"))) // Number 6
+const program = Effect.gen(function* () {
+  const sheet = yield* spreadsheet()
+  yield* sheet.set({ A1: number(2), B1: { formula: "=A1*3" } })
+  const spreadsheetTotal = yield* sheet.get("B1")
 
-const builder = await Effect.runPromise(form(["price", "quantity", "total"]))
-await Effect.runPromise(builder.set({
-  price: number(12),
-  quantity: number(3),
-  total: { formula: "=[price]*[quantity]" },
-}))
-console.log(await Effect.runPromise(builder.get("total"))) // Number 36
+  const builder = yield* form(["price", "quantity", "total"])
+  yield* builder.set({
+    price: number(12),
+    quantity: number(3),
+    total: { formula: "=[price]*[quantity]" },
+  })
+  const formTotal = yield* builder.get("total")
+
+  return { spreadsheetTotal, formTotal }
+})
+const result = await Effect.runPromise(program)
+console.log(result.spreadsheetTotal) // { _tag: "Number", value: 6 }
+console.log(result.formTotal) // { _tag: "Number", value: 36 }
 ```
 
 Inputs use tagged formula values. A `{ formula: "=..." }` entry is calculated; `null` clears an entry. Spreadsheet addresses are case insensitive and empty cells are blank. Form field names are case sensitive; declared empty fields are blank and unknown fields return `#REF!`. Each `set` call is one atomic batch and returns changed values keyed by host names.
