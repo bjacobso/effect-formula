@@ -2744,6 +2744,188 @@
       "name": "text is not a logical input",
       "formula": "=NOT(\"TRUE\")",
       "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.ACOS",
+      "name": "argument above unit interval",
+      "formula": "=ACOS(2)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.ASIN",
+      "name": "argument below unit interval",
+      "formula": "=ASIN(-2)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.LN",
+      "name": "zero is outside logarithm domain",
+      "formula": "=LN(0)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.LOG10",
+      "name": "negative argument is outside logarithm domain",
+      "formula": "=LOG10(-1)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.EXP",
+      "name": "exponent one",
+      "formula": "=EXP(1)",
+      "expected": { "_tag": "Number", "value": 2.718281828459045 },
+      "tolerance": 1e-15
+    },
+    {
+      "id": "function.EVEN",
+      "name": "zero remains even zero",
+      "formula": "=EVEN(0)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.ODD",
+      "name": "negative even integer rounds away from zero",
+      "formula": "=ODD(-2)",
+      "expected": { "_tag": "Number", "value": -3 }
+    },
+    {
+      "id": "function.EXACT",
+      "name": "identical text compares equal",
+      "formula": "=EXACT(\"Same\";\"Same\")",
+      "expected": { "_tag": "Boolean", "value": true }
+    },
+    {
+      "id": "function.REPT",
+      "name": "zero repetitions return empty text",
+      "formula": "=REPT(\"ab\";0)",
+      "expected": { "_tag": "Text", "value": "" }
+    },
+    {
+      "id": "function.MONTH",
+      "name": "month from leap day text",
+      "formula": "=MONTH(\"2024-02-29\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.YEAR",
+      "name": "year from leap day text",
+      "formula": "=YEAR(\"2024-02-29\")",
+      "expected": { "_tag": "Number", "value": 2024 }
+    },
+    {
+      "id": "function.NOW",
+      "name": "rejects an argument",
+      "formula": "=NOW(1)",
+      "clock": "2020-01-01T00:00:00.000Z",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.TODAY",
+      "name": "rejects an argument",
+      "formula": "=TODAY(1)",
+      "clock": "2020-01-01T00:00:00.000Z",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.N",
+      "name": "text converts to zero",
+      "formula": "=N(\"42\")",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.T",
+      "name": "text is preserved",
+      "formula": "=T(\"abc\")",
+      "expected": { "_tag": "Text", "value": "abc" }
+    },
+    {
+      "id": "function.SLN",
+      "name": "zero lifetime is invalid",
+      "formula": "=SLN(100;0;0)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.SYD",
+      "name": "period beyond lifetime is invalid",
+      "formula": "=SYD(100;0;4;5)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.DDB",
+      "name": "zero depreciation factor is invalid",
+      "formula": "=DDB(100;0;10;1;0)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.FV",
+      "name": "payment type outside zero or one is invalid",
+      "formula": "=FV(0;2;-10;0;2)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.NPER",
+      "name": "zero rate and zero payment cannot determine periods",
+      "formula": "=NPER(0;0;20)",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.PMT",
+      "name": "zero periods is invalid",
+      "formula": "=PMT(0;0;20)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.PV",
+      "name": "payment type outside zero or one is invalid",
+      "formula": "=PV(0;2;-10;0;2)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.DGET",
+      "name": "multiple matching rows are an error",
+      "formula": "=DGET([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.DGET",
+      "name": "no matching rows is an error",
+      "formula": "=DGET([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": { "cell:D2": { "_tag": "Text", "value": "Nobody" } },
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.DAVERAGE",
+      "name": "no matching numeric rows is an error",
+      "formula": "=DAVERAGE([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": { "cell:D2": { "_tag": "Text", "value": "Nobody" } },
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.DSTDEV",
+      "name": "one matching row cannot yield sample deviation",
+      "formula": "=DSTDEV([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": { "cell:D2": { "_tag": "Text", "value": "Bob" } },
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.DVAR",
+      "name": "one matching row cannot yield sample variance",
+      "formula": "=DVAR([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": { "cell:D2": { "_tag": "Text", "value": "Bob" } },
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.DSUM",
+      "name": "no matching rows sum to zero",
+      "formula": "=DSUM([.A1:.B4];\"Score\";[.D1:.D2])",
+      "preset": "database",
+      "bindings": { "cell:D2": { "_tag": "Text", "value": "Nobody" } },
+      "expected": { "_tag": "Number", "value": 0 }
     }
   ],
   "presets": {
