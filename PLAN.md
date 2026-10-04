@@ -36,6 +36,19 @@ Status: in progress. The first executable slice is implemented; the checklist be
 
 **Exit:** a host can update inputs and receive consistent affected results without rebuilding the whole engine. Tests prove cycle and revision behavior.
 
+## Typed formula path
+
+- [x] Build a typed AST for declared primitive fields, numeric operators, `IF`, and schema-backed custom functions.
+- [x] Check parsed strings against the same declarations with located diagnostics and explicit complete or partial coverage.
+- [x] Validate registered custom function arguments and results at runtime; cover builder mistakes with compile-time tests.
+- [x] Check declared numeric ranges and selected built-ins; reject unimplemented operations with partial coverage.
+- [x] Accept built ASTs in session updates and decode host inputs against declared schemas for one-shot evaluation.
+- [x] Check formulas against their destination schemas and validate every input update in typed sessions.
+- [x] Preserve custom function Effect error and requirement types through explicit evaluation and typed sessions.
+- [ ] Expand strict checker rules for the remaining built-ins, ranges outside numeric aggregation, and their coercion and lazy evaluation behavior.
+
+**Exit:** a built formula and equivalent parsed string share an AST and evaluator; strict checking passes only for fully covered, type-compatible expressions. Typed sessions enforce input and formula contracts on each update. Broader function coverage remains a separate gate.
+
 ## Phase 3 — compatibility expansion
 
 - [x] Extract the ODF 1.4 Small, Medium, and Large group function lists and listed nonfunction requirements into an auditable inventory.

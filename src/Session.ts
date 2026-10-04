@@ -1,9 +1,9 @@
-import { Effect, Layer, Option, Ref, Schema } from "effect";
+import { Effect, Option, Ref, Schema } from "effect";
 import { type GridBounds, parseAddress, sheetOfKey } from "./Address.js";
 import {
   type EvalOptions,
   EvaluationFailure,
-  evaluate,
+  evaluateWithServices,
   FunctionRegistry,
   type FunctionRegistryService,
   offsetReferenceKeys,
@@ -18,20 +18,23 @@ import { error, ValueSchema } from "./Value.js";
 
 export type Update =
   | { readonly _tag: "Input"; readonly key: string; readonly value: Value }
-  | { readonly _tag: "Formula"; readonly key: string; readonly formula: string }
+  | { readonly _tag: "Formula"; readonly key: string; readonly formula: string | Ast }
   | { readonly _tag: "Remove"; readonly key: string };
 export interface Revision {
   readonly revision: number;
   readonly changed: ReadonlyMap<string, Value>;
 }
-export interface FormulaSession {
+export interface FormulaSession<E = EvaluationFailure, R = never> {
   readonly update: (
     updates: readonly Update[],
-  ) => Effect.Effect<Revision, ParseError | ResolutionFailure | EvaluationFailure>;
+  ) => Effect.Effect<Revision, ParseError | ResolutionFailure | EvaluationFailure | E, R>;
   readonly get: (key: string) => Effect.Effect<Value, ResolutionFailure | EvaluationFailure>;
   readonly snapshot: () => Effect.Effect<ReadonlyMap<string, Value>>;
 }
-export interface SessionOptions extends ParseOptions, EvalOptions {}
+export interface SessionOptions extends ParseOptions, EvalOptions {
+  /** Validate tagged input values against these decoded host schemas on every update. */
+  readonly inputSchemas?: Readonly<Record<string, Schema.Schema.AnyNoContext>>;
+}
 interface SessionState {
   readonly inputs: ReadonlyMap<string, Value>;
   readonly formulas: ReadonlyMap<string, Ast>;
@@ -100,9 +103,15 @@ function affected(
 export const createSession = (
   options: SessionOptions = {},
 ): Effect.Effect<FormulaSession, never, ReferenceResolver | FunctionRegistry> =>
+  Effect.flatMap(FunctionRegistry, (functions) => createSessionWithRegistry(functions, options));
+
+/** Create a session with an explicit typed function registry. */
+export const createSessionWithRegistry = <E, R>(
+  functions: FunctionRegistryService<E, R>,
+  options: SessionOptions = {},
+): Effect.Effect<FormulaSession<E, R>, never, ReferenceResolver> =>
   Effect.gen(function* () {
     const external = yield* ReferenceResolver;
-    const functions = yield* FunctionRegistry;
     const semaphore = yield* Effect.makeSemaphore(1);
     const state = yield* Ref.make<SessionState>({
       inputs: new Map(),
@@ -154,6 +163,28 @@ export const createSession = (
                       new EvaluationFailure({ message: `Invalid range at ${entry.key}` }),
                     );
                 }
+                const inputSchema = options.inputSchemas?.[entry.key];
+                if (inputSchema) {
+                  const raw =
+                    decoded.right._tag === "Number" ||
+                    decoded.right._tag === "Text" ||
+                    decoded.right._tag === "Boolean"
+                      ? decoded.right.value
+                      : undefined;
+                  const checked = Schema.decodeUnknownEither(inputSchema)(raw);
+                  if (
+                    checked._tag === "Left" ||
+                    (typeof checked.right === "number" && decoded.right._tag !== "Number") ||
+                    (typeof checked.right === "string" && decoded.right._tag !== "Text") ||
+                    (typeof checked.right === "boolean" && decoded.right._tag !== "Boolean") ||
+                    (typeof checked.right !== "number" &&
+                      typeof checked.right !== "string" &&
+                      typeof checked.right !== "boolean")
+                  )
+                    return yield* Effect.fail(
+                      new EvaluationFailure({ message: `Input schema rejected ${entry.key}` }),
+                    );
+                }
                 nextInputs.set(entry.key, decoded.right);
                 nextFormulas.delete(entry.key);
                 nextResults.delete(entry.key);
@@ -162,6 +193,7 @@ export const createSession = (
               case "Formula": {
                 const ast = yield* Effect.try({
                   try: () => {
+                    if (typeof entry.formula !== "string") return entry.formula;
                     const sheet = sheetOfKey(entry.key);
                     return parseSync(
                       entry.formula,
@@ -194,7 +226,7 @@ export const createSession = (
           const computed = new Map<string, Value>();
           const compute = (
             key: string,
-          ): Effect.Effect<Value, ResolutionFailure | EvaluationFailure> =>
+          ): Effect.Effect<Value, ResolutionFailure | EvaluationFailure | E, R> =>
             Effect.gen(function* () {
               if (nextInputs.has(key)) return nextInputs.get(key)!;
               const ast = nextFormulas.get(key);
@@ -203,12 +235,11 @@ export const createSession = (
               if (computed.has(key)) return computed.get(key)!;
               if (!dirty.has(key) && nextResults.has(key)) return nextResults.get(key)!;
               active.add(key);
-              const local: ReferenceResolverService = { get: compute };
-              const registry: FunctionRegistryService = functions;
-              const value = yield* evaluate(ast, options).pipe(
-                Effect.provide(Layer.succeed(ReferenceResolver, local)),
-                Effect.provide(Layer.succeed(FunctionRegistry, registry)),
-              );
+              const local: ReferenceResolverService<ResolutionFailure | EvaluationFailure | E, R> =
+                {
+                  get: compute,
+                };
+              const value = yield* evaluateWithServices(ast, functions, local, options);
               active.delete(key);
               computed.set(key, value);
               return value;

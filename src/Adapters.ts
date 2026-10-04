@@ -6,7 +6,7 @@ import {
   ReferenceResolver,
   type ResolutionFailure,
 } from "./Engine.js";
-import type { ParseError } from "./Parser.js";
+import type { Ast, ParseError } from "./Parser.js";
 import {
   createSession,
   type FormulaSession,
@@ -16,7 +16,7 @@ import {
 } from "./Session.js";
 import { blank, error, type Scalar, type Value } from "./Value.js";
 
-export type Entry = Scalar | { readonly formula: string } | null;
+export type Entry = Scalar | { readonly formula: string | Ast } | null;
 export interface HostRevision {
   readonly revision: number;
   readonly changed: ReadonlyMap<string, Value>;

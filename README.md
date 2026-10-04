@@ -86,6 +86,34 @@ const graph = await Effect.runPromise(analyzeFormulaGraph(formulas, {
 
 The result includes dependencies and cycles. A cycle gives its members an `Error` result and a diagnostic. Analysis includes references in every branch, so it may report a cycle that runtime `IF` skips. Function results without signatures remain `Unknown`. Range expansion uses the same grid and size limits as `formulaInputs`.
 
+### Typed formula preview
+
+`typedFormula` builds the same AST that `parseSync` produces. Field declarations use plain `Schema.Number`, `Schema.String`, or `Schema.Boolean`; other schemas produce partial checker coverage. The builder checks field names, operands, and custom function arguments in TypeScript. `check` applies a strict subset of those rules to user-entered strings and reports UTF-16 source spans.
+
+```ts
+import { Effect, Schema } from "effect"
+import { defineFormulaFunction, memory, typedFormula } from "effect-formula"
+
+const triple = defineFormulaFunction("TRIPLE", [Schema.Number] as const, Schema.Number,
+  ([value]) => Effect.succeed(value * 3))
+const f = typedFormula({ price: Schema.Number, quantity: Schema.Number,
+  discounted: Schema.Boolean }, [triple])
+
+const product = f.multiply(f.ref("price"), f.ref("quantity"))
+const built = f.if(f.ref("discounted"), f.call(triple, product), product)
+const entered = f.parse("=IF([discounted];TRIPLE([price]*[quantity]);[price]*[quantity])")
+const result = f.check(entered, Schema.Number)
+// result.passed === true; built.ast and entered evaluate through the same engine
+const inputs = await Effect.runPromise(f.decodeInputs({ price: 12, quantity: 3,
+  discounted: true }))
+const value = await Effect.runPromise(f.evaluate(built.ast).pipe(Effect.provide(memory(inputs))))
+// value is { _tag: "Number", value: 108 }
+```
+
+`decodeInputs` and `decodeCells` validate provided host fields or cells and convert them to tagged formula values for `memory`. Registered functions validate their arguments and return value against their schemas at runtime. `f.evaluate` and `f.createSession` preserve custom functions' Effect errors and required services. Declare output fields or cells in the contract before using the typed session: it checks each formula against its destination schema and validates every input update. A failed batch leaves the prior revision intact. The general `evaluate`, `createSession`, and host adapters continue to use the existing `FunctionRegistry` service for ordinary formulas.
+
+Strict checking supports literals, declared references, numeric operators and ranges, comparisons, three-argument `IF`, registered functions, and selected built-ins (`TRUE`, `FALSE`, `PI`, `NA`, `ABS`, `SUM`, `AVERAGE`, `MIN`, `MAX`). Declare cell schemas through the third `typedFormula` argument, for example `{ cells: { A1: Schema.Number, A2: Schema.Number } }`, before checking `=SUM(A1:A2)`. Unknown references, unsupported functions or schemas, and mismatched results prevent a pass. Formula errors such as division by zero remain possible values. Other built-ins and range operations receive partial coverage until their rules are added.
+
 OpenFormula references such as `[Sales.A1]`, `['Sales West'.A1]`, `[Sales.A1:.B2]`, `[Sales.A:.B]`, and `[Sales.1:.2]` use keys like `cell:Sales!A1` and `cell:Sales%20West!A1`. Pass `{ grid: { rows, columns } }` to `evaluate` or `createSession` when using whole rows or columns; expansion also obeys `maxRangeCells`. A formula stored at `cell:Sales!B1` resolves local `[.A1]` and `A1` against `Sales`. Cross-sheet range spans and external IRI references are not supported yet.
 
 Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains cell keys, while `None` means the address is invalid or exceeds the configured range limit. Formula evaluation still returns tagged formula values, including errors; operational failures stay in Effect's error channel. Optional configuration fields remain ordinary TypeScript optional inputs.

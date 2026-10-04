@@ -34,16 +34,18 @@ export class ResolutionFailure extends Data.TaggedError("ResolutionFailure")<{
 export class EvaluationFailure extends Data.TaggedError("EvaluationFailure")<{
   readonly message: string;
 }> {}
-export interface ReferenceResolverService {
-  readonly get: (key: string) => Effect.Effect<Value, ResolutionFailure | EvaluationFailure>;
+export interface ReferenceResolverService<E = ResolutionFailure | EvaluationFailure, R = never> {
+  readonly get: (key: string) => Effect.Effect<Value, E, R>;
 }
 export class ReferenceResolver extends Context.Tag("effect-formula/ReferenceResolver")<
   ReferenceResolver,
   ReferenceResolverService
 >() {}
-export type CustomFunction = (args: readonly Value[]) => Effect.Effect<Value, EvaluationFailure>;
-export interface FunctionRegistryService {
-  readonly functions: ReadonlyMap<string, CustomFunction>;
+export type CustomFunction<E = EvaluationFailure, R = never> = (
+  args: readonly Value[],
+) => Effect.Effect<Value, E, R>;
+export interface FunctionRegistryService<E = EvaluationFailure, R = never> {
+  readonly functions: ReadonlyMap<string, CustomFunction<E, R>>;
   readonly disabled?: ReadonlySet<string>;
   readonly signatures?: ReadonlyMap<string, FunctionSignature>;
 }
@@ -547,11 +549,30 @@ export function evaluate(
   ResolutionFailure | EvaluationFailure,
   ReferenceResolver | FunctionRegistry
 > {
+  return Effect.flatMap(FunctionRegistry, (registry) =>
+    evaluateWithRegistry(ast, registry, options),
+  );
+}
+/** Evaluate with an explicit registry, preserving custom function errors and requirements. */
+export function evaluateWithRegistry<E, R>(
+  ast: Ast,
+  registry: FunctionRegistryService<E, R>,
+  options: EvalOptions = {},
+): Effect.Effect<Value, ResolutionFailure | EvaluationFailure | E, ReferenceResolver | R> {
+  return Effect.flatMap(ReferenceResolver, (resolver) =>
+    evaluateWithServices(ast, registry, resolver, options),
+  );
+}
+/** Evaluate with explicit services, including a resolver whose failures and requirements are typed. */
+export function evaluateWithServices<E, R, ER, RR>(
+  ast: Ast,
+  registry: FunctionRegistryService<E, R>,
+  resolver: ReferenceResolverService<ER, RR>,
+  options: EvalOptions = {},
+): Effect.Effect<Value, EvaluationFailure | E | ER, R | RR> {
   return Effect.gen(function* () {
-    const resolver = yield* ReferenceResolver;
-    const registry = yield* FunctionRegistry;
     let steps = 0;
-    const visit = (node: Ast): Effect.Effect<Value, ResolutionFailure | EvaluationFailure> =>
+    const visit = (node: Ast): Effect.Effect<Value, EvaluationFailure | E | ER, R | RR> =>
       Effect.gen(function* () {
         if (++steps > (options.maxSteps ?? 100000))
           return yield* Effect.fail(

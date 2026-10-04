@@ -7,4 +7,5 @@ export * from "./GraphAnalysis.js";
 export * from "./Parser.js";
 export * from "./Session.js";
 export * from "./TypeAnalysis.js";
+export * from "./TypedFormula.js";
 export * from "./Value.js";
