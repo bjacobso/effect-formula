@@ -2926,6 +2926,197 @@
       "preset": "database",
       "bindings": { "cell:D2": { "_tag": "Text", "value": "Nobody" } },
       "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "syntax.references",
+      "name": "quoted sheet name with escaped apostrophe",
+      "formula": "=['Bob''s Sales'.A1]",
+      "bindings": { "cell:Bob's%20Sales!A1": { "_tag": "Number", "value": 9 } },
+      "expected": { "_tag": "Number", "value": 9 }
+    },
+    {
+      "id": "syntax.references",
+      "name": "bounded whole row",
+      "formula": "=SUM([.1:.2])",
+      "grid": { "rows": 2, "columns": 2 },
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 2 },
+        "cell:A2": { "_tag": "Number", "value": 3 },
+        "cell:B2": { "_tag": "Number", "value": 4 }
+      },
+      "expected": { "_tag": "Number", "value": 10 }
+    },
+    {
+      "id": "syntax.references",
+      "name": "reversed cell range has the same area",
+      "formula": "=SUM([.B2:.A1])",
+      "preset": "horizontal",
+      "expected": { "_tag": "Number", "value": 33 }
+    },
+    {
+      "id": "syntax.errors",
+      "name": "invalid reference error literal",
+      "formula": "=[#REF!]",
+      "expected": { "_tag": "Error", "code": "#REF!" }
+    },
+    {
+      "id": "conversion.reference",
+      "name": "range cannot be used as scalar arithmetic operand",
+      "formula": "=[.A1:.A2]+1",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "conversion.text",
+      "name": "logical value converts to text",
+      "formula": "=TRUE()&\"\"",
+      "expected": { "_tag": "Text", "value": "TRUE" }
+    },
+    {
+      "id": "conversion.text",
+      "name": "blank reference converts to empty text",
+      "formula": "=A1&\"x\"",
+      "bindings": { "cell:A1": { "_tag": "Blank" } },
+      "expected": { "_tag": "Text", "value": "x" }
+    },
+    {
+      "id": "operator.add",
+      "name": "numeric text is converted before addition",
+      "formula": "=\"2.5\"+1",
+      "expected": { "_tag": "Number", "value": 3.5 }
+    },
+    {
+      "id": "operator.subtract",
+      "name": "subtracting a negative number",
+      "formula": "=3-(-2)",
+      "expected": { "_tag": "Number", "value": 5 }
+    },
+    {
+      "id": "operator.multiply",
+      "name": "negative times positive number",
+      "formula": "=-2*3",
+      "expected": { "_tag": "Number", "value": -6 }
+    },
+    {
+      "id": "operator.not-equal",
+      "name": "case variants compare equal",
+      "formula": "=\"ABC\"<>\"abc\"",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "operator.unary-minus",
+      "name": "negating a negative expression",
+      "formula": "=-(-3)",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.COUNTIF",
+      "name": "blank criterion matches blank cells",
+      "formula": "=COUNTIF([.A1:.A3];\"=\")",
+      "bindings": {
+        "cell:A1": { "_tag": "Blank" },
+        "cell:A2": { "_tag": "Text", "value": "" },
+        "cell:A3": { "_tag": "Number", "value": 0 }
+      },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.COUNTIF",
+      "name": "scalar literal is not a reference range",
+      "formula": "=COUNTIF(1;\">0\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.SUMIF",
+      "name": "matched result error propagates",
+      "formula": "=SUMIF([.A1:.A2];\">0\";[.B1])",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 0 },
+        "cell:A2": { "_tag": "Number", "value": 1 },
+        "cell:B1": { "_tag": "Number", "value": 10 },
+        "cell:B2": { "_tag": "Error", "code": "#N/A" }
+      },
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.SUMIF",
+      "name": "no matching rows sum to zero",
+      "formula": "=SUMIF([.A1:.A2];\">10\")",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Number", "value": 2 }
+      },
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.AVERAGEIF",
+      "name": "no matching rows cannot be averaged",
+      "formula": "=AVERAGEIF([.A1:.A2];\">10\")",
+      "bindings": {
+        "cell:A1": { "_tag": "Number", "value": 1 },
+        "cell:A2": { "_tag": "Number", "value": 2 }
+      },
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "function.MATCH",
+      "name": "unsupported match mode is an error",
+      "formula": "=MATCH(2;[.A1:.A3];2)",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "missing exact match returns NA",
+      "formula": "=VLOOKUP(4;[.A1:.B3];2;FALSE())",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.VLOOKUP",
+      "name": "column beyond table is an error",
+      "formula": "=VLOOKUP(2;[.A1:.B3];3;FALSE())",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#REF!" }
+    },
+    {
+      "id": "function.HLOOKUP",
+      "name": "missing exact match returns NA",
+      "formula": "=HLOOKUP(4;[.A1:.C2];2;FALSE())",
+      "preset": "horizontal",
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "function.INDEX",
+      "name": "column beyond area is an error",
+      "formula": "=INDEX([.A1:.B3];1;3)",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#REF!" }
+    },
+    {
+      "id": "function.DATE",
+      "name": "valid leap day survives date construction",
+      "formula": "=DAY(DATE(2024;2;29))",
+      "expected": { "_tag": "Number", "value": 29 }
+    },
+    {
+      "id": "function.DAY",
+      "name": "invalid nonleap February date text is rejected",
+      "formula": "=DAY(\"2023-02-29\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.WEEKDAY",
+      "name": "Monday starts at zero in mode three",
+      "formula": "=WEEKDAY(DATE(2020;1;1);3)",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.WEEKDAY",
+      "name": "unsupported numbering mode is an error",
+      "formula": "=WEEKDAY(DATE(2020;1;1);4)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     }
   ],
   "presets": {
