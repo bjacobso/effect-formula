@@ -2577,6 +2577,173 @@
         "value": 0.1
       },
       "tolerance": 1e-08
+    },
+    {
+      "id": "syntax.numbers",
+      "name": "leading decimal with signed exponent",
+      "formula": "=.5E+2",
+      "expected": { "_tag": "Number", "value": 50 }
+    },
+    {
+      "id": "syntax.strings",
+      "name": "escaped quote beside Unicode text",
+      "formula": "=\"café\"\" noir\"",
+      "expected": { "_tag": "Text", "value": "café\" noir" }
+    },
+    {
+      "id": "conversion.number",
+      "name": "trim whitespace around numeric text",
+      "formula": "=\"  -2.5  \"*2",
+      "expected": { "_tag": "Number", "value": -5 }
+    },
+    {
+      "id": "conversion.number",
+      "name": "reject nonnumeric text",
+      "formula": "=\"two\"+1",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "conversion.number",
+      "name": "blank reference converts to zero",
+      "formula": "=A1+2",
+      "bindings": { "cell:A1": { "_tag": "Blank" } },
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "conversion.logical",
+      "name": "zero selects false branch",
+      "formula": "=IF(0;1;2)",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "conversion.logical",
+      "name": "text cannot be an IF condition",
+      "formula": "=IF(\"FALSE\";1;2)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "conversion.error",
+      "name": "right operand error propagates",
+      "formula": "=1+#N/A",
+      "expected": { "_tag": "Error", "code": "#N/A" }
+    },
+    {
+      "id": "operator.divide",
+      "name": "division by zero",
+      "formula": "=4/0",
+      "expected": { "_tag": "Error", "code": "#DIV/0!" }
+    },
+    {
+      "id": "operator.percent",
+      "name": "percentage of negative number",
+      "formula": "=(-25)%",
+      "expected": { "_tag": "Number", "value": -0.25 }
+    },
+    {
+      "id": "operator.comparison",
+      "name": "text equality ignores case",
+      "formula": "=\"Alpha\"=\"alpha\"",
+      "expected": { "_tag": "Boolean", "value": true }
+    },
+    {
+      "id": "operator.comparison",
+      "name": "text ordering ignores case",
+      "formula": "=\"Alpha\"<\"beta\"",
+      "expected": { "_tag": "Boolean", "value": true }
+    },
+    {
+      "id": "operator.concat",
+      "name": "blank reference contributes empty text",
+      "formula": "=\"a\"&A1",
+      "bindings": { "cell:A1": { "_tag": "Blank" } },
+      "expected": { "_tag": "Text", "value": "a" }
+    },
+    {
+      "id": "operator.intersection",
+      "name": "disjoint ranges return null error",
+      "formula": "=SUM([.A1:.A2]![.C1:.C2])",
+      "preset": "lookup",
+      "expected": { "_tag": "Error", "code": "#NULL!" }
+    },
+    {
+      "id": "function.CHOOSE",
+      "name": "first branch skips later error",
+      "formula": "=CHOOSE(1;42;1/0)",
+      "expected": { "_tag": "Number", "value": 42 }
+    },
+    {
+      "id": "function.CHOOSE",
+      "name": "index beyond choices is an error",
+      "formula": "=CHOOSE(3;1;2)",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
+      "id": "function.ISERR",
+      "name": "NA is excluded from ISERR",
+      "formula": "=ISERR(NA())",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.ISERROR",
+      "name": "NA is included in ISERROR",
+      "formula": "=ISERROR(NA())",
+      "expected": { "_tag": "Boolean", "value": true }
+    },
+    {
+      "id": "function.ISNA",
+      "name": "division error is not NA",
+      "formula": "=ISNA(1/0)",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.ISBLANK",
+      "name": "empty text is not blank",
+      "formula": "=ISBLANK(\"\")",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.ISNUMBER",
+      "name": "numeric text remains text",
+      "formula": "=ISNUMBER(\"3\")",
+      "expected": { "_tag": "Boolean", "value": false }
+    },
+    {
+      "id": "function.ROWS",
+      "name": "single cell has one row",
+      "formula": "=ROWS(A1)",
+      "bindings": { "cell:A1": { "_tag": "Blank" } },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.COLUMNS",
+      "name": "single cell has one column",
+      "formula": "=COLUMNS(A1)",
+      "bindings": { "cell:A1": { "_tag": "Blank" } },
+      "expected": { "_tag": "Number", "value": 1 }
+    },
+    {
+      "id": "function.ABS",
+      "name": "zero stays zero",
+      "formula": "=ABS(0)",
+      "expected": { "_tag": "Number", "value": 0 }
+    },
+    {
+      "id": "function.SQRT",
+      "name": "negative argument returns numeric error",
+      "formula": "=SQRT(-1)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.LOG",
+      "name": "invalid base returns numeric error",
+      "formula": "=LOG(8;1)",
+      "expected": { "_tag": "Error", "code": "#NUM!" }
+    },
+    {
+      "id": "function.NOT",
+      "name": "text is not a logical input",
+      "formula": "=NOT(\"TRUE\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
     }
   ],
   "presets": {
