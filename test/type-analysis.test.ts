@@ -315,6 +315,42 @@ describe("AST type analysis", () => {
     ).toEqual({ types: ["Number"], diagnostics: [] });
   });
 
+  it("audits rounding and variadic text/logical call conversions and arity", () => {
+    for (const source of ['=ROUNDUP("1.2";1)', "=ROUNDDOWN(TRUE)", '=CONCATENATE(12;TRUE;"x")'])
+      expect(analyze(source)).toEqual({
+        types: [source.includes("CONCATENATE") ? "Text" : "Number"],
+        diagnostics: [],
+      });
+    for (const source of ["=ROUNDUP()", "=ROUNDDOWN(1;2;3)", "=CONCATENATE()", "=AND()", "=OR()"]) {
+      expect(analyze(source).types).toEqual(["Error"]);
+      expect(analyze(source).diagnostics[0]?.severity).toBe("definite");
+    }
+    expect(analyze("=CONCATENATE(A1:A2)").types).toEqual(["Error"]);
+    expect(analyze('=OR(FALSE;"TRUE")')).toMatchObject({
+      types: ["Error"],
+      diagnostics: [{ severity: "definite", path: "root.args[1]" }],
+    });
+    expect(analyze("=ROUNDUP([text])", { "field:text": "Text" })).toMatchObject({
+      types: ["Error", "Number"],
+      diagnostics: [{ severity: "possible" }],
+    });
+    expect(analyze("=AND(FALSE;#N/A)").types).toEqual(["Error"]);
+  });
+
+  it("analyzes logical NumberSequence ranges without converting skipped cells", () => {
+    const cells = { "cell:A1": "Number", "cell:A2": "Text", "cell:A3": "Boolean" } as const;
+    expect(analyze("=AND(A1:A3)", cells)).toEqual({ types: ["Boolean"], diagnostics: [] });
+    expect(analyze("=OR(A1:A3)", { ...cells, "cell:A2": "Error" })).toEqual({
+      types: ["Error", "Boolean"],
+      diagnostics: [],
+    });
+    expect(analyze("=AND(A1:A4)", cells)).toMatchObject({
+      types: ["Unknown", "Boolean"],
+      diagnostics: [{ severity: "possible" }],
+    });
+    expect(analyze("=NOT(A1:A3)", cells).types).toEqual(["Error"]);
+  });
+
   it("uses signatures and removals from the runtime function profile", () => {
     const profile = configureFunctions({
       register: {

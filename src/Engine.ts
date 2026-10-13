@@ -282,7 +282,7 @@ function aggregate(
   }
 }
 const builtInNames = new Set(
-  "TRUE FALSE PI NA ABS ACOS ASIN ATAN COS SIN TAN EXP LN LOG10 DEGREES RADIANS EVEN ODD FACT SQRT INT POWER ATAN2 MOD ROUND LOG TRUNC LEN LOWER UPPER TRIM LEFT RIGHT MID EXACT FIND REPT N T VALUE ROWS COLUMNS ISBLANK ISERROR ISERR ISNA ISNUMBER ISTEXT ISLOGICAL ISNONTEXT".split(
+  "TRUE FALSE PI NA ABS ACOS ASIN ATAN COS SIN TAN EXP LN LOG10 DEGREES RADIANS EVEN ODD FACT SQRT INT POWER ATAN2 MOD ROUND ROUNDUP ROUNDDOWN LOG TRUNC CONCATENATE LEN LOWER UPPER TRIM LEFT RIGHT MID EXACT FIND REPT N T VALUE ROWS COLUMNS ISBLANK ISERROR ISERR ISNA ISNUMBER ISTEXT ISLOGICAL ISNONTEXT".split(
     " ",
   ),
 );
@@ -291,12 +291,15 @@ function shiftDecimal(value: number, places: number): number {
   const [coefficient, exponent = "0"] = value.toString().split("e");
   return Number(`${coefficient}e${Number(exponent) + places}`);
 }
-function roundDecimal(value: number, places: number, mode: "round" | "truncate"): Scalar {
+function roundDecimal(value: number, places: number, mode: "round" | "truncate" | "up"): Scalar {
   if (places > 1000) return number(value);
-  if (places < -1000) return number(0);
+  if (places < -1000) return mode === "up" && value !== 0 ? error("#NUM!") : number(0);
   const scaled = shiftDecimal(Math.abs(value), places);
   if (!Number.isFinite(scaled)) return number(value);
-  const rounded = mode === "round" ? Math.round(scaled) : Math.trunc(scaled);
+  if (mode === "up" && scaled === 0 && value !== 0)
+    return number(Math.sign(value) * shiftDecimal(1, -places));
+  const rounded =
+    mode === "round" ? Math.round(scaled) : mode === "up" ? Math.ceil(scaled) : Math.trunc(scaled);
   if (rounded === 0) return number(0);
   return number(Math.sign(value) * shiftDecimal(rounded, -places));
 }
@@ -386,13 +389,19 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       return binary((left, right) =>
         right === 0 ? error("#DIV/0!") : number(left - right * Math.floor(left / right)),
       );
-    case "ROUND": {
+    case "ROUND":
+    case "ROUNDUP":
+    case "ROUNDDOWN": {
       if (args.length < 1 || args.length > 2) return error("#VALUE!");
       const value = toNumber(scalar(args[0]!));
       const digits = args[1] ? toNumber(scalar(args[1])) : number(0);
       if (isError(value)) return value;
       if (isError(digits)) return digits;
-      return roundDecimal(value.value, Math.trunc(digits.value), "round");
+      return roundDecimal(
+        value.value,
+        Math.trunc(digits.value),
+        name === "ROUNDUP" ? "up" : name === "ROUNDDOWN" ? "truncate" : "round",
+      );
     }
     case "LOG": {
       if (args.length < 1 || args.length > 2) return error("#VALUE!");
@@ -411,6 +420,16 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       if (isError(value)) return value;
       if (isError(digits)) return digits;
       return roundDecimal(value.value, Math.trunc(digits.value), "truncate");
+    }
+    case "CONCATENATE": {
+      if (!args.length) return error("#VALUE!");
+      let result = "";
+      for (const arg of args) {
+        const value = toText(scalar(arg));
+        if (isError(value)) return value;
+        result += value.value;
+      }
+      return text(result);
     }
     case "LEN":
     case "LOWER":
