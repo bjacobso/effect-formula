@@ -4,12 +4,14 @@ import {
   bool,
   createForm,
   defineFormulaFunction,
+  error,
   evaluate,
   FunctionRegistry,
   memory,
   number,
   parseSync,
   ReferenceResolver,
+  text,
   typedFormula,
   type Value,
 } from "../src/index.js";
@@ -184,7 +186,13 @@ describe("typed formula", () => {
     );
     expect(checkFailure).toMatchObject({
       _tag: "FormulaCheckFailure",
-      diagnostics: [{ code: "OperandType", path: "root.right", span: { start: 10, end: 15 } }],
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: "OperandType",
+          path: "root.right",
+          span: { start: 10, end: 15 },
+        }),
+      ]),
     });
     expect(await Effect.runPromise(session.get("field:scaled"))).toEqual(number(20));
     await expect(
@@ -225,11 +233,177 @@ describe("typed formula", () => {
       grid.evaluate(builtRange.ast).pipe(Effect.provide(memory(cells))),
     );
     expect(result).toEqual(number(5));
-    expect(grid.check(grid.parse("=SUM(A1:B1)"), Schema.Number).passed).toBe(false);
+    expect(grid.check(grid.parse("=SUM(A1:B1)"), Schema.Number).passed).toBe(true);
     expect(grid.check(grid.parse("=SUM(A1:A3)"), Schema.Number).coverage).toBe("partial");
     expect(grid.check(grid.parse("=ABS(-3)"), Schema.Number).passed).toBe(true);
     expect(grid.check(grid.parse("=TRUE()"), Schema.Boolean).passed).toBe(true);
     expect(grid.check(grid.parse("=NA()"), Schema.Number).passed).toBe(false);
+  });
+
+  it.each([
+    ['=1="1"', Schema.Boolean, bool(false)],
+    ['="AbC"="abc"', Schema.Boolean, bool(true)],
+    ["=1<>TRUE", Schema.Boolean, bool(true)],
+    ["=1<2", Schema.Boolean, bool(true)],
+    ["=2<=2", Schema.Boolean, bool(true)],
+    ['="b">="a"', Schema.Boolean, bool(true)],
+    ["=TRUE&12", Schema.String, text("TRUE12")],
+    ['=CONCATENATE("a";TRUE;12;)', Schema.String, text("aTRUE12")],
+    ["=LEN(TRUE)", Schema.Number, number(4)],
+    ['=LEN("😀a")', Schema.Number, number(2)],
+    ['=LEFT("😀abc")', Schema.String, text("😀")],
+    ['=RIGHT(1234;"2")', Schema.String, text("34")],
+    ['=MID("😀abc";2;2)', Schema.String, text("ab")],
+    ['=UPPER("abc")', Schema.String, text("ABC")],
+    ["=LOWER(TRUE)", Schema.String, text("true")],
+    ['=TRIM(" a  b ")', Schema.String, text("a b")],
+    ["=AND(TRUE;2;)", Schema.Boolean, bool(false)],
+    ["=OR(FALSE;2)", Schema.Boolean, bool(true)],
+    ["=NOT(0)", Schema.Boolean, bool(true)],
+    ['=ROUND("-1.25";1)', Schema.Number, number(-1.3)],
+    ["=ROUNDUP(-1.21;1)", Schema.Number, number(-1.3)],
+    ["=ROUNDDOWN(-1.29;1)", Schema.Number, number(-1.2)],
+    ["=ROUNDUP(12.1)", Schema.Number, number(13)],
+    ["=ROUNDDOWN(12.9)", Schema.Number, number(12)],
+    ["=ROUNDUP(1e-300;-100)", Schema.Number, number(1e100)],
+    ["=ROUNDUP(0;-1001)", Schema.Number, number(0)],
+    ["=IFERROR(ROUNDUP(1;-1001);42)", Schema.Number, number(42)],
+    ["=INT(-1.2)", Schema.Number, number(-2)],
+    ["=MOD(-3;2)", Schema.Number, number(1)],
+    ["=IFERROR(MOD(1;0);9)", Schema.Number, number(9)],
+    ["=IFERROR(1;MYSTERY())", Schema.Number, number(1)],
+    ["=IFERROR(#N/A;9)", Schema.Number, number(9)],
+    ['=CHOOSE("2.9";MYSTERY();42)', Schema.Number, number(42)],
+    ["=IF(TRUE;42;MYSTERY())", Schema.Number, number(42)],
+    ["=IF(TRUE;;MYSTERY())", Schema.Number, number(0)],
+  ] as const)(
+    "checks and evaluates %s using engine conversions",
+    async (source, schema, expected) => {
+      const result = f.check(f.parse(source), schema);
+      expect(result).toMatchObject({ passed: true, coverage: "complete", diagnostics: [] });
+      expect(
+        await Effect.runPromise(
+          f.evaluate(f.parse(source)).pipe(Effect.provide(memory(new Map()))),
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  it.each([
+    ['=AND("TRUE")', "ArgumentType"],
+    ["=NOT([label])", "ArgumentType"],
+    ["=ROUND([label])", "ArgumentType"],
+    ['=ROUND("bad")', "ArgumentType"],
+    ['=LEFT("a";"bad")', "ArgumentType"],
+    ['=MID("a";1)', "Arity"],
+    ["=ROUNDUP(1;2;3)", "Arity"],
+    ["=ROUNDDOWN()", "Arity"],
+    ["=CONCATENATE()", "Arity"],
+    ["=AND()", "Arity"],
+    ["=IFERROR(1)", "Arity"],
+    ["=CHOOSE(3;1;2)", "ArgumentType"],
+    ['=IFERROR(1/0;"text")', "ResultType"],
+    ['=CHOOSE([quantity];1;"text")', "ResultType"],
+  ])("rejects incompatible call %s with located diagnostics", (source, code) => {
+    const result = f.check(f.parse(source!), Schema.Number);
+    expect(result.passed).toBe(false);
+    expect(result.coverage).toBe("complete");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code, span: expect.any(Object) }),
+    );
+  });
+
+  it("uses NumberSequence for logical ranges and rejects ranges in scalar contexts", async () => {
+    const grid = typedFormula({}, [], {
+      cells: { A1: Schema.Number, A2: Schema.String, A3: Schema.Boolean },
+    });
+    const cells = await Effect.runPromise(grid.decodeCells({ A1: 1, A2: "bad", A3: false }));
+    for (const source of ["=AND(A1:A3)", "=OR(A1:A3)"]) {
+      expect(grid.check(grid.parse(source), Schema.Boolean).passed).toBe(true);
+      expect(
+        await Effect.runPromise(
+          grid.evaluate(grid.parse(source)).pipe(Effect.provide(memory(cells))),
+        ),
+      ).toEqual(bool(true));
+    }
+    expect(grid.check(grid.parse("=AND(A2:A3)"), Schema.Boolean).passed).toBe(true);
+    expect(
+      await Effect.runPromise(
+        grid.evaluate(grid.parse("=AND(A2:A3)")).pipe(Effect.provide(memory(cells))),
+      ),
+    ).toEqual(bool(true));
+    expect(
+      await Effect.runPromise(
+        grid.evaluate(grid.parse("=OR(A2:A3)")).pipe(Effect.provide(memory(cells))),
+      ),
+    ).toEqual(bool(false));
+    expect(grid.check(grid.parse("=AND(A1:A4)"), Schema.Boolean).coverage).toBe("partial");
+    for (const source of ["=NOT(A1:A3)", "=LEN(A1:A3)", '=A1:A3&"x"', "=A1:A3=1", "=ROUND(A1:A3)"])
+      expect(grid.check(grid.parse(source), Schema.String).passed).toBe(false);
+    expect(grid.check(grid.parse("=SUM(A1:A3)"), Schema.Number).passed).toBe(true);
+    expect(
+      await Effect.runPromise(
+        grid.evaluate(grid.parse("=SUM(A1:A3)")).pipe(Effect.provide(memory(cells))),
+      ),
+    ).toEqual(number(1));
+    expect(grid.check(grid.parse("=AVERAGE(A2:A3)"), Schema.Number).passed).toBe(false);
+  });
+
+  it("keeps IFERROR and CHOOSE lazy, AND and OR eager, and operational failures in Effect", async () => {
+    let calls = 0;
+    const fail = defineFormulaFunction("FAIL", [] as const, Schema.Number, () =>
+      Effect.sync(() => {
+        calls++;
+        throw new Error("evaluated");
+      }),
+    );
+    const contract = typedFormula({}, [fail]);
+    const run = (source: string) =>
+      Effect.runPromise(
+        contract.evaluate(contract.parse(source)).pipe(Effect.provide(memory(new Map()))),
+      );
+    expect(await run("=IFERROR(1;FAIL())")).toEqual(number(1));
+    expect(await run("=CHOOSE(2;FAIL();42)")).toEqual(number(42));
+    expect(calls).toBe(0);
+    await expect(run("=AND(FALSE;FAIL())")).rejects.toThrow("evaluated");
+    await expect(run("=OR(TRUE;FAIL())")).rejects.toThrow("evaluated");
+    await expect(run("=IFERROR(FAIL();42)")).rejects.toThrow("evaluated");
+    expect(calls).toBe(3);
+    expect(await run("=AND(FALSE;#N/A)")).toEqual(error("#N/A"));
+    expect(await run("=OR(TRUE;#N/A)")).toEqual(error("#N/A"));
+    expect(
+      contract.check(contract.parse("=IFERROR(FAIL();MYSTERY())"), Schema.Number).coverage,
+    ).toBe("partial");
+    expect(f.check(f.parse("=SQRT(4)"), Schema.Number).coverage).toBe("partial");
+  });
+
+  it("builds the same AST for the added helpers", () => {
+    const grid = typedFormula({}, [], { cells: { A1: Schema.Number, A2: Schema.String } });
+    const examples = [
+      [f.equals(f.text("a"), f.text("A")), '="a"="A"'],
+      [f.lessThan(f.number(1), f.number(2)), "=1<2"],
+      [f.concat(f.text("a"), f.boolean(true)), '="a"&TRUE'],
+      [f.concatenate(f.text("a"), f.number(1)), '=CONCATENATE("a";1)'],
+      [f.and(f.boolean(true), f.number(1)), "=AND(TRUE;1)"],
+      [f.or(f.boolean(false), f.number(1)), "=OR(FALSE;1)"],
+      [f.not(f.number(0)), "=NOT(0)"],
+      [f.len(f.text("abc")), '=LEN("abc")'],
+      [f.left(f.text("abc")), '=LEFT("abc")'],
+      [f.right(f.text("abc"), f.number(2)), '=RIGHT("abc";2)'],
+      [f.mid(f.text("abc"), f.number(1), f.number(2)), '=MID("abc";1;2)'],
+      [f.upper(f.text("abc")), '=UPPER("abc")'],
+      [f.lower(f.text("ABC")), '=LOWER("ABC")'],
+      [f.trim(f.text(" a ")), '=TRIM(" a ")'],
+      [f.round(f.number(1.2)), "=ROUND(1.2)"],
+      [f.roundUp(f.number(1.2), f.number(1)), "=ROUNDUP(1.2;1)"],
+      [f.roundDown(f.number(1.2)), "=ROUNDDOWN(1.2)"],
+      [f.int(f.number(1.2)), "=INT(1.2)"],
+      [f.mod(f.number(3), f.number(2)), "=MOD(3;2)"],
+      [f.ifError(f.number(1), f.number(2)), "=IFERROR(1;2)"],
+      [f.choose(f.number(1), f.number(2), f.text("x")), '=CHOOSE(1;2;"x")'],
+      [grid.and(grid.valuesRange("A1", "A2")), "=AND(A1:A2)"],
+    ] as const;
+    for (const [built, source] of examples) expect(built.ast).toEqual(parseSync(source));
   });
 
   it("marks unsupported field schemas as partial coverage", () => {
@@ -261,6 +435,26 @@ function typeChecks() {
   grid.range("A1", "B1");
   // @ts-expect-error SUM requires at least one expression
   grid.sum();
+  f.add(f.len(f.text("abc")), f.number(1));
+  // @ts-expect-error Logical scalar text is rejected
+  f.and(f.text("TRUE"));
+  // @ts-expect-error NOT cannot accept a range
+  grid.not(grid.range("A1", "A1"));
+  // @ts-expect-error Text position is rejected
+  f.mid(f.text("abc"), f.text("1"), f.number(2));
+  // @ts-expect-error Rounding expects a Number expression
+  f.round(f.ref("label"));
+  // @ts-expect-error CHOOSE index must be Number
+  f.choose(f.text("1"), f.number(2));
+  // @ts-expect-error CHOOSE needs a choice
+  f.choose(f.number(1));
+  // @ts-expect-error CONCATENATE needs an argument
+  f.concatenate();
+  // @ts-expect-error Mixed CHOOSE results cannot be treated as Number
+  f.add(f.choose(f.number(1), f.number(2), f.text("x")), f.number(1));
+  f.add(f.choose(f.number(1), f.number(2), f.number(3)), f.number(1));
+  // @ts-expect-error A range is not a scalar text argument
+  grid.len(grid.valuesRange("A1", "B1"));
   const effectful = typedFormula({ amount: Schema.Number }, [scale]);
   // @ts-expect-error Effect requirements cannot be erased into the default registry service
   Layer.succeed(FunctionRegistry, effectful.registry);

@@ -16,6 +16,7 @@ import {
   type SessionOptions,
   type Update,
 } from "./Session.js";
+import { analyzeFormulaTypesSync } from "./TypeAnalysis.js";
 import { bool, error, number, text, type Value } from "./Value.js";
 
 type PrimitiveSchema = typeof Schema.Number | typeof Schema.String | typeof Schema.Boolean;
@@ -25,6 +26,13 @@ type NumericKeys<F extends Fields> = {
   [K in keyof F]: SchemaValue<F[K]> extends number ? K : never;
 }[keyof F] &
   string;
+type ExpressionValue<E> = E extends Expression<infer T> ? T : never;
+type ScalarExpression = Expression<number> | Expression<string> | Expression<boolean>;
+type LogicalExpression =
+  | Expression<number>
+  | Expression<boolean>
+  | Expression<readonly number[]>
+  | Expression<readonly (number | string | boolean)[]>;
 type Arguments<P extends readonly PrimitiveSchema[]> = {
   readonly [K in keyof P]: SchemaValue<P[K]>;
 };
@@ -247,173 +255,136 @@ export function typedFormula<
       report(node, path, "UnknownCoverage", message);
       return ["Unknown"];
     };
-    const infer = (node: Ast, path: string): readonly FormulaType[] => {
-      switch (node._tag) {
-        case "Missing":
-          return ["Blank"];
-        case "Literal":
-          return [node.value._tag];
-        case "Reference": {
-          if (!declarations.has(node.key))
-            return unknown(node, path, `Unknown reference ${node.key}`);
-          const type = declarations.get(node.key);
-          return type ? [type] : unknown(node, path, `Unsupported schema for ${node.key}`);
-        }
-        case "Range": {
-          const keys = rangeKeys(
-            node.start,
-            node.end,
-            options.maxRangeCells ?? 10000,
-            options.grid,
-          );
-          if (Option.isNone(keys)) return unknown(node, path, "Range cannot be expanded");
-          for (const key of keys.value.flat()) {
-            if (!declarations.has(key)) return unknown(node, path, `Unknown range cell ${key}`);
-            if (declarations.get(key) !== "Number")
-              report(node, path, "RangeType", `Range cell ${key} must be Number`);
+    const inferred = new Map<string, readonly FormulaType[]>();
+    const supported = new Set([
+      "TRUE",
+      "FALSE",
+      "PI",
+      "NA",
+      "ABS",
+      "SUM",
+      "AVERAGE",
+      "MIN",
+      "MAX",
+      "IF",
+      "IFERROR",
+      "CHOOSE",
+      "AND",
+      "OR",
+      "NOT",
+      "LEN",
+      "LEFT",
+      "RIGHT",
+      "MID",
+      "UPPER",
+      "LOWER",
+      "TRIM",
+      "CONCATENATE",
+      "ROUND",
+      "ROUNDUP",
+      "ROUNDDOWN",
+      "INT",
+      "MOD",
+    ]);
+    const analysis = analyzeFormulaTypesSync(
+      ast,
+      Object.fromEntries(
+        [...declarations].filter((entry): entry is [string, FormulaType] => entry[1] !== undefined),
+      ),
+      { registry, ...options },
+      {},
+      (node, path, types) => {
+        inferred.set(path, types);
+        switch (node._tag) {
+          case "Reference":
+            if (!declarations.has(node.key)) unknown(node, path, `Unknown reference ${node.key}`);
+            else if (!declarations.get(node.key))
+              unknown(node, path, `Unsupported schema for ${node.key}`);
+            break;
+          case "Range": {
+            const keys = rangeKeys(
+              node.start,
+              node.end,
+              options.maxRangeCells ?? 10000,
+              options.grid,
+            );
+            if (Option.isNone(keys)) unknown(node, path, "Range cannot be expanded");
+            else
+              for (const key of keys.value.flat()) {
+                if (!declarations.has(key)) unknown(node, path, `Unknown range cell ${key}`);
+                else if (!declarations.get(key))
+                  unknown(node, path, `Unsupported schema for ${key}`);
+              }
+            break;
           }
-          return ["Range"];
-        }
-        case "Unary": {
-          const value = infer(node.value, `${path}.value`);
-          if (node.operator === "+") return value;
-          if (!value.every((type) => type === "Number" || type === "Error"))
-            report(node.value, `${path}.value`, "OperandType", `${node.operator} requires Number`);
-          return value.length === 1 && value[0] === "Error"
-            ? ["Error"]
-            : value.includes("Error")
-              ? ["Number", "Error"]
-              : ["Number"];
-        }
-        case "Binary": {
-          const left = infer(node.left, `${path}.left`);
-          const right = infer(node.right, `${path}.right`);
-          if (["+", "-", "*", "/", "^"].includes(node.operator)) {
-            if (!left.every((type) => type === "Number" || type === "Error"))
-              report(node.left, `${path}.left`, "OperandType", `${node.operator} requires Number`);
-            if (!right.every((type) => type === "Number" || type === "Error"))
+          case "Unary":
+            if (
+              node.operator !== "+" &&
+              !inferred.get(`${path}.value`)?.every((type) => type === "Number" || type === "Error")
+            )
               report(
-                node.right,
-                `${path}.right`,
+                node.value,
+                `${path}.value`,
                 "OperandType",
                 `${node.operator} requires Number`,
               );
-            if (
-              (left.length === 1 && left[0] === "Error") ||
-              (right.length === 1 && right[0] === "Error")
-            )
-              return ["Error"];
-            return left.includes("Error") || right.includes("Error")
-              ? ["Number", "Error"]
-              : ["Number"];
-          }
-          if (["=", "<>", "<", "<=", ">", ">="].includes(node.operator)) {
-            if (left.length !== 1 || right.length !== 1 || left[0] !== right[0])
-              report(node, path, "OperandType", "Comparison requires matching operand types");
-            if (
-              (left.length === 1 && left[0] === "Error") ||
-              (right.length === 1 && right[0] === "Error")
-            )
-              return ["Error"];
-            return left.includes("Error") || right.includes("Error")
-              ? ["Boolean", "Error"]
-              : ["Boolean"];
-          }
-          return unknown(node, path, `Unsupported operator ${node.operator}`);
-        }
-        case "Call": {
-          if (node.name === "IF") {
-            if (node.args.length !== 3) {
-              report(node, path, "Arity", "IF requires three arguments in strict formulas");
-              return ["Unknown"];
-            }
-            const condition = infer(node.args[0]!, `${path}.args[0]`);
-            if (!condition.every((type) => type === "Boolean" || type === "Error"))
-              report(node.args[0]!, `${path}.args[0]`, "ArgumentType", "IF requires Boolean");
-            if (condition.length === 1 && condition[0] === "Error") return ["Error"];
-            const yes = infer(node.args[1]!, `${path}.args[1]`);
-            const no = infer(node.args[2]!, `${path}.args[2]`);
-            return [
-              ...new Set([
-                ...yes,
-                ...no,
-                ...(condition.includes("Error") ? ["Error" as const] : []),
-              ]),
-            ];
-          }
-          const fn = registered.get(node.name);
-          if (!fn) {
-            if (["TRUE", "FALSE", "PI", "NA"].includes(node.name)) {
-              if (node.args.length !== 0) {
-                report(node, path, "Arity", `${node.name} expects no arguments`);
-                return ["Error"];
-              }
-              return [node.name === "PI" ? "Number" : node.name === "NA" ? "Error" : "Boolean"];
-            }
-            if (node.name === "ABS") {
-              if (node.args.length !== 1) {
-                report(node, path, "Arity", "ABS expects one argument");
-                return ["Error"];
-              }
-              const types = infer(node.args[0]!, `${path}.args[0]`);
-              if (!types.every((type) => type === "Number" || type === "Error"))
-                report(node.args[0]!, `${path}.args[0]`, "ArgumentType", "ABS expects Number");
-              return types.length === 1 && types[0] === "Error" ? ["Error"] : ["Number"];
-            }
-            if (["SUM", "AVERAGE", "MIN", "MAX"].includes(node.name)) {
-              if (!node.args.length) {
-                report(node, path, "Arity", `${node.name} expects an argument`);
-                return ["Error"];
-              }
-              let definiteError = false;
+            break;
+          case "Binary":
+            if (["+", "-", "*", "/", "^"].includes(node.operator)) {
+              for (const side of ["left", "right"] as const)
+                if (
+                  !inferred
+                    .get(`${path}.${side}`)
+                    ?.every((type) => type === "Number" || type === "Error")
+                )
+                  report(
+                    node[side],
+                    `${path}.${side}`,
+                    "OperandType",
+                    `${node.operator} requires Number`,
+                  );
+            } else if (!["&", "=", "<>", "<", "<=", ">", ">="].includes(node.operator))
+              unknown(node, path, `Unsupported operator ${node.operator}`);
+            break;
+          case "Call": {
+            const fn = registered.get(node.name);
+            if (fn) {
+              // Schema-backed functions do not perform the advisory signature conversions.
               node.args.forEach((arg, index) => {
-                const types = infer(arg, `${path}.args[${index}]`);
-                if (!types.every((type) => ["Number", "Range", "Error"].includes(type)))
+                const expectedType = fn.signature.parameters[index];
+                const argTypes = inferred.get(`${path}.args[${index}]`);
+                if (
+                  expectedType &&
+                  !argTypes?.every((type) => type === expectedType || type === "Error")
+                )
                   report(
                     arg,
                     `${path}.args[${index}]`,
                     "ArgumentType",
-                    `${node.name} expects Number or numeric range`,
+                    `${node.name} expects ${expectedType}`,
                   );
-                if (types.length === 1 && types[0] === "Error") definiteError = true;
               });
-              return definiteError ? ["Error"] : ["Number"];
-            }
-            return unknown(node, path, `Unknown function ${node.name}`);
+            } else if (!supported.has(node.name))
+              unknown(node, path, `Unknown function ${node.name}`);
+            else if (node.name === "IF" && node.args.length !== 3)
+              report(node, path, "Arity", "IF requires three arguments in strict formulas");
+            break;
           }
-          if (node.args.length !== fn.signature.parameters.length) {
-            report(
-              node,
-              path,
-              "Arity",
-              `${node.name} expects ${fn.signature.parameters.length} arguments`,
-            );
-            return ["Unknown"];
-          }
-          let possibleError = false;
-          let definiteError = false;
-          node.args.forEach((arg, index) => {
-            const types = infer(arg, `${path}.args[${index}]`);
-            if (types.includes("Error")) possibleError = true;
-            if (types.length === 1 && types[0] === "Error") definiteError = true;
-            const expectedType = fn.signature.parameters[index];
-            if (!types.every((type) => type === expectedType || type === "Error"))
-              report(
-                arg,
-                `${path}.args[${index}]`,
-                "ArgumentType",
-                `${node.name} expects ${expectedType}`,
-              );
-          });
-          return definiteError
-            ? ["Error"]
-            : possibleError
-              ? [fn.signature.returns, "Error"]
-              : [fn.signature.returns];
         }
-      }
-    };
-    const types = infer(ast, "root");
+      },
+    );
+    for (const diagnostic of analysis.diagnostics) {
+      // Keep stricter operand/custom-function diagnostics when they already explain the problem.
+      if (diagnostics.some((existing) => existing.path === diagnostic.path)) continue;
+      diagnostics.push({
+        code: diagnostic.message.includes("expects") ? "Arity" : "ArgumentType",
+        message: diagnostic.message,
+        path: diagnostic.path,
+        ...(diagnostic.span ? { span: diagnostic.span } : {}),
+      });
+    }
+    const types = analysis.types;
+    if (types.includes("Unknown")) coverage = "partial";
     const expectedType = category(expected)!;
     if (
       !types.includes(expectedType) ||
@@ -427,6 +398,17 @@ export function typedFormula<
       diagnostics,
     };
   };
+
+  const builtin = <T>(name: string, args: readonly { readonly ast: Ast }[]): Expression<T> => {
+    if (registered.has(name)) throw new Error(`Use call() for the registered override of ${name}`);
+    return expression({ _tag: "Call", name, args: args.map((arg) => arg.ast) });
+  };
+  const compare = (
+    operator: "=" | "<>" | "<" | "<=" | ">" | ">=",
+    left: ScalarExpression,
+    right: ScalarExpression,
+  ): Expression<boolean> =>
+    expression({ _tag: "Binary", operator, left: left.ast, right: right.ast });
 
   return {
     registry,
@@ -515,6 +497,18 @@ export function typedFormula<
         throw new Error(`Range ${start}:${end} requires declared Number cells`);
       return expression({ _tag: "Range", start: startKey, end: endKey });
     },
+    /** A declared primitive range for NumberSequence logical arguments. */
+    valuesRange<S extends keyof C & string, E extends keyof C & string>(
+      start: S,
+      end: E,
+    ): Expression<readonly (number | string | boolean)[]> {
+      const startKey = `cell:${start.toUpperCase()}`;
+      const endKey = `cell:${end.toUpperCase()}`;
+      const keys = rangeKeys(startKey, endKey, options.maxRangeCells ?? 10000, options.grid);
+      if (Option.isNone(keys) || keys.value.flat().some((key) => !declarations.get(key)))
+        throw new Error(`Range ${start}:${end} requires declared primitive cells`);
+      return expression({ _tag: "Range", start: startKey, end: endKey });
+    },
     number: (value: number): Expression<number> =>
       expression({ _tag: "Literal", value: number(value) }),
     text: (value: string): Expression<string> =>
@@ -525,13 +519,55 @@ export function typedFormula<
       expression({ _tag: "Binary", operator: "+", left: left.ast, right: right.ast }),
     multiply: (left: Expression<number>, right: Expression<number>): Expression<number> =>
       expression({ _tag: "Binary", operator: "*", left: left.ast, right: right.ast }),
-    greaterThan: (left: Expression<number>, right: Expression<number>): Expression<boolean> =>
-      expression({ _tag: "Binary", operator: ">", left: left.ast, right: right.ast }),
+    equals: (left: ScalarExpression, right: ScalarExpression) => compare("=", left, right),
+    notEquals: (left: ScalarExpression, right: ScalarExpression) => compare("<>", left, right),
+    lessThan: (left: ScalarExpression, right: ScalarExpression) => compare("<", left, right),
+    lessThanOrEqual: (left: ScalarExpression, right: ScalarExpression) =>
+      compare("<=", left, right),
+    greaterThan: (left: ScalarExpression, right: ScalarExpression) => compare(">", left, right),
+    greaterThanOrEqual: (left: ScalarExpression, right: ScalarExpression) =>
+      compare(">=", left, right),
+    concat: (left: ScalarExpression, right: ScalarExpression): Expression<string> =>
+      expression({ _tag: "Binary", operator: "&", left: left.ast, right: right.ast }),
+    concatenate: (first: ScalarExpression, ...rest: readonly ScalarExpression[]) =>
+      builtin<string>("CONCATENATE", [first, ...rest]),
+    and: (first: LogicalExpression, ...rest: readonly LogicalExpression[]) =>
+      builtin<boolean>("AND", [first, ...rest]),
+    or: (first: LogicalExpression, ...rest: readonly LogicalExpression[]) =>
+      builtin<boolean>("OR", [first, ...rest]),
+    not: (value: Expression<boolean> | Expression<number>) => builtin<boolean>("NOT", [value]),
+    len: (value: ScalarExpression) => builtin<number>("LEN", [value]),
+    left: (value: ScalarExpression, count?: Expression<number>) =>
+      builtin<string>("LEFT", count ? [value, count] : [value]),
+    right: (value: ScalarExpression, count?: Expression<number>) =>
+      builtin<string>("RIGHT", count ? [value, count] : [value]),
+    mid: (value: ScalarExpression, start: Expression<number>, count: Expression<number>) =>
+      builtin<string>("MID", [value, start, count]),
+    upper: (value: ScalarExpression) => builtin<string>("UPPER", [value]),
+    lower: (value: ScalarExpression) => builtin<string>("LOWER", [value]),
+    trim: (value: ScalarExpression) => builtin<string>("TRIM", [value]),
+    round: (value: Expression<number>, digits?: Expression<number>) =>
+      builtin<number>("ROUND", digits ? [value, digits] : [value]),
+    roundUp: (value: Expression<number>, digits?: Expression<number>) =>
+      builtin<number>("ROUNDUP", digits ? [value, digits] : [value]),
+    roundDown: (value: Expression<number>, digits?: Expression<number>) =>
+      builtin<number>("ROUNDDOWN", digits ? [value, digits] : [value]),
+    int: (value: Expression<number>) => builtin<number>("INT", [value]),
+    mod: (value: Expression<number>, divisor: Expression<number>) =>
+      builtin<number>("MOD", [value, divisor]),
+    ifError<T, U>(value: Expression<T>, fallback: Expression<U>): Expression<T | U> {
+      return builtin<T | U>("IFERROR", [value, fallback]);
+    },
+    choose<const Choices extends readonly [ScalarExpression, ...ScalarExpression[]]>(
+      index: Expression<number>,
+      ...choices: Choices
+    ): Expression<ExpressionValue<Choices[number]>> {
+      return builtin("CHOOSE", [index, ...choices]);
+    },
     sum: (
       first: Expression<number> | Expression<readonly number[]>,
       ...rest: readonly (Expression<number> | Expression<readonly number[]>)[]
-    ): Expression<number> =>
-      expression({ _tag: "Call", name: "SUM", args: [first.ast, ...rest.map((arg) => arg.ast)] }),
+    ): Expression<number> => builtin<number>("SUM", [first, ...rest]),
     if<T, U>(
       condition: Expression<boolean>,
       yes: Expression<T>,

@@ -24,7 +24,7 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [x] Analyze a graph of formulas in dependency order, propagating possible types and reporting static cycles.
 - [x] Analyze lazy `IF`, `IFERROR`, and `CHOOSE` result categories, narrowing statically known selections.
 - [x] Analyze numeric aggregate return categories using declared range cell types and NumberSequence conversion rules.
-- [ ] Expand audited function signatures so type diagnostics cover more calls.
+- [x] Expand audited function signatures and conversion analysis for rounding, concatenation, and logical calls (including NumberSequence ranges).
 
 **Exit:** both examples run against the same core; table-driven tests cover precedence, coercion, blank/error behavior, ranges, and `IF` branch laziness. Unsupported syntax fails clearly.
 
@@ -45,7 +45,8 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [x] Accept built ASTs in session updates and decode host inputs against declared schemas for one-shot evaluation.
 - [x] Check formulas against their destination schemas and validate every input update in typed sessions.
 - [x] Preserve custom function Effect error and requirement types through explicit evaluation and typed sessions.
-- [ ] Expand strict checker rules for the remaining built-ins, ranges outside numeric aggregation, and their coercion and lazy evaluation behavior.
+- [x] Expand strict checking and builder helpers for comparisons, concatenation, logical ranges, lazy `IFERROR`/`CHOOSE`, common text functions, and rounding/math using shared conversion analysis.
+- [ ] Cover the other built-ins and reference/range operations (including intersection and computed aggregate ranges); unsupported operations retain partial strict coverage.
 
 **Exit:** a built formula and equivalent parsed string share an AST and evaluator; strict checking passes only for fully covered, type-compatible expressions. Typed sessions enforce input and formula contracts on each update. Broader function coverage remains a separate gate.
 
