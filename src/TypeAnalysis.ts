@@ -284,15 +284,14 @@ export const analyzeFormulaTypes = (
                 "A range cannot be used as a scalar",
               );
             return unique(
-              types.map(
-                (type): FormulaType =>
-                  type === "Error" || type === "Unknown"
-                    ? type
-                    : type === "Range" && !dimension
-                      ? "Error"
-                      : node.name === "T"
-                        ? "Text"
-                        : "Number",
+              types.map((type): FormulaType =>
+                type === "Error" || type === "Unknown"
+                  ? type
+                  : type === "Range" && !dimension
+                    ? "Error"
+                    : node.name === "T"
+                      ? "Text"
+                      : "Number",
               ),
             );
           }
