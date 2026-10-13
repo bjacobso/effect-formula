@@ -25,6 +25,7 @@ export interface Revision {
   readonly changed: ReadonlyMap<string, Value>;
 }
 export interface FormulaSession<E = EvaluationFailure, R = never> {
+  /** Interruption before atomic commit aborts the batch; queued updates continue. */
   readonly update: (
     updates: readonly Update[],
   ) => Effect.Effect<Revision, ParseError | ResolutionFailure | EvaluationFailure | E, R>;
@@ -131,142 +132,146 @@ export const createSessionWithRegistry = <E, R>(
       );
     const snapshot = () =>
       semaphore.withPermits(1)(Effect.map(Ref.get(state), (current) => new Map(current.results)));
-    const update = (updates: readonly Update[]) =>
-      semaphore.withPermits(1)(
-        Effect.gen(function* () {
-          const current = yield* Ref.get(state);
-          const nextInputs = new Map(current.inputs);
-          const nextFormulas = new Map(current.formulas);
-          const nextResults = new Map(current.results);
-          const touched = new Set<string>();
-          for (const entry of updates) {
-            if (
-              !entry.key ||
-              (!(entry.key.startsWith("cell:") && Option.isSome(parseAddress(entry.key))) &&
-                !/^(?:field:[A-Za-z_][A-Za-z0-9_.-]*|name:[A-Z_][A-Z0-9_.]*)$/.test(entry.key))
-            )
-              return yield* Effect.fail(
-                new EvaluationFailure({ message: `Invalid reference key: ${entry.key}` }),
-              );
-            touched.add(entry.key);
-            switch (entry._tag) {
-              case "Input": {
-                const decoded = Schema.decodeUnknownEither(ValueSchema)(entry.value);
-                if (decoded._tag === "Left")
+    const stage = (updates: readonly Update[]) =>
+      Effect.gen(function* () {
+        const current = yield* Ref.get(state);
+        const nextInputs = new Map(current.inputs);
+        const nextFormulas = new Map(current.formulas);
+        const nextResults = new Map(current.results);
+        const touched = new Set<string>();
+        for (const entry of updates) {
+          if (
+            !entry.key ||
+            (!(entry.key.startsWith("cell:") && Option.isSome(parseAddress(entry.key))) &&
+              !/^(?:field:[A-Za-z_][A-Za-z0-9_.-]*|name:[A-Z_][A-Z0-9_.]*)$/.test(entry.key))
+          )
+            return yield* Effect.fail(
+              new EvaluationFailure({ message: `Invalid reference key: ${entry.key}` }),
+            );
+          touched.add(entry.key);
+          switch (entry._tag) {
+            case "Input": {
+              const decoded = Schema.decodeUnknownEither(ValueSchema)(entry.value);
+              if (decoded._tag === "Left")
+                return yield* Effect.fail(
+                  new EvaluationFailure({ message: `Invalid value at ${entry.key}` }),
+                );
+              if (decoded.right._tag === "Range") {
+                const width = decoded.right.rows[0]?.length ?? 0;
+                if (!width || decoded.right.rows.some((row) => row.length !== width))
                   return yield* Effect.fail(
-                    new EvaluationFailure({ message: `Invalid value at ${entry.key}` }),
+                    new EvaluationFailure({ message: `Invalid range at ${entry.key}` }),
                   );
-                if (decoded.right._tag === "Range") {
-                  const width = decoded.right.rows[0]?.length ?? 0;
-                  if (!width || decoded.right.rows.some((row) => row.length !== width))
-                    return yield* Effect.fail(
-                      new EvaluationFailure({ message: `Invalid range at ${entry.key}` }),
-                    );
-                }
-                const inputSchema = options.inputSchemas?.[entry.key];
-                if (inputSchema) {
-                  const raw =
-                    decoded.right._tag === "Number" ||
-                    decoded.right._tag === "Text" ||
-                    decoded.right._tag === "Boolean"
-                      ? decoded.right.value
-                      : undefined;
-                  const checked = Schema.decodeUnknownEither(inputSchema)(raw);
-                  if (
-                    checked._tag === "Left" ||
-                    (typeof checked.right === "number" && decoded.right._tag !== "Number") ||
-                    (typeof checked.right === "string" && decoded.right._tag !== "Text") ||
-                    (typeof checked.right === "boolean" && decoded.right._tag !== "Boolean") ||
-                    (typeof checked.right !== "number" &&
-                      typeof checked.right !== "string" &&
-                      typeof checked.right !== "boolean")
-                  )
-                    return yield* Effect.fail(
-                      new EvaluationFailure({ message: `Input schema rejected ${entry.key}` }),
-                    );
-                }
-                nextInputs.set(entry.key, decoded.right);
-                nextFormulas.delete(entry.key);
-                nextResults.delete(entry.key);
-                break;
               }
-              case "Formula": {
-                const ast = yield* Effect.try({
-                  try: () => {
-                    if (typeof entry.formula !== "string") return entry.formula;
-                    const sheet = sheetOfKey(entry.key);
-                    return parseSync(
-                      entry.formula,
-                      Option.isSome(sheet) ? { ...options, currentSheet: sheet.value } : options,
-                    );
-                  },
-                  catch: (cause) =>
-                    cause instanceof ParseError
-                      ? cause
-                      : new ParseError({ message: String(cause), offset: 0 }),
-                });
-                nextFormulas.set(entry.key, ast);
-                nextInputs.delete(entry.key);
-                break;
+              const inputSchema = options.inputSchemas?.[entry.key];
+              if (inputSchema) {
+                const raw =
+                  decoded.right._tag === "Number" ||
+                  decoded.right._tag === "Text" ||
+                  decoded.right._tag === "Boolean"
+                    ? decoded.right.value
+                    : undefined;
+                const checked = Schema.decodeUnknownEither(inputSchema)(raw);
+                if (
+                  checked._tag === "Left" ||
+                  (typeof checked.right === "number" && decoded.right._tag !== "Number") ||
+                  (typeof checked.right === "string" && decoded.right._tag !== "Text") ||
+                  (typeof checked.right === "boolean" && decoded.right._tag !== "Boolean") ||
+                  (typeof checked.right !== "number" &&
+                    typeof checked.right !== "string" &&
+                    typeof checked.right !== "boolean")
+                )
+                  return yield* Effect.fail(
+                    new EvaluationFailure({ message: `Input schema rejected ${entry.key}` }),
+                  );
               }
-              case "Remove":
-                nextInputs.delete(entry.key);
-                nextFormulas.delete(entry.key);
-                nextResults.delete(entry.key);
-                break;
+              nextInputs.set(entry.key, decoded.right);
+              nextFormulas.delete(entry.key);
+              nextResults.delete(entry.key);
+              break;
             }
+            case "Formula": {
+              const ast = yield* Effect.try({
+                try: () => {
+                  if (typeof entry.formula !== "string") return entry.formula;
+                  const sheet = sheetOfKey(entry.key);
+                  return parseSync(
+                    entry.formula,
+                    Option.isSome(sheet) ? { ...options, currentSheet: sheet.value } : options,
+                  );
+                },
+                catch: (cause) =>
+                  cause instanceof ParseError
+                    ? cause
+                    : new ParseError({ message: String(cause), offset: 0 }),
+              });
+              nextFormulas.set(entry.key, ast);
+              nextInputs.delete(entry.key);
+              break;
+            }
+            case "Remove":
+              nextInputs.delete(entry.key);
+              nextFormulas.delete(entry.key);
+              nextResults.delete(entry.key);
+              break;
           }
-          const dirty = affected(
-            nextFormulas,
-            touched,
-            options.maxRangeCells ?? 10000,
-            options.grid,
-          );
-          const active = new Set<string>();
-          const computed = new Map<string, Value>();
-          const compute = (
-            key: string,
-          ): Effect.Effect<Value, ResolutionFailure | EvaluationFailure | E, R> =>
-            Effect.gen(function* () {
-              if (nextInputs.has(key)) return nextInputs.get(key)!;
-              const ast = nextFormulas.get(key);
-              if (!ast) return yield* external.get(key);
-              if (active.has(key)) return error("#CYCLE!");
-              if (computed.has(key)) return computed.get(key)!;
-              if (!dirty.has(key) && nextResults.has(key)) return nextResults.get(key)!;
-              active.add(key);
-              const local: ReferenceResolverService<ResolutionFailure | EvaluationFailure | E, R> =
-                {
-                  get: compute,
-                };
-              const value = yield* evaluateWithServices(ast, functions, local, options);
-              active.delete(key);
-              computed.set(key, value);
-              return value;
-            });
-          for (const key of dirty) yield* compute(key);
-          for (const [key, value] of computed) nextResults.set(key, value);
-          const changed = new Map<string, Value>();
-          for (const key of touched) {
-            const value = nextInputs.get(key) ?? nextResults.get(key) ?? error("#REF!");
-            if (
-              JSON.stringify(value) !==
-              JSON.stringify(current.inputs.get(key) ?? current.results.get(key))
-            )
-              changed.set(key, value);
-          }
-          for (const [key, value] of computed)
-            if (JSON.stringify(value) !== JSON.stringify(current.results.get(key)))
-              changed.set(key, value);
-          const revision = current.revision + 1;
-          yield* Ref.set(state, {
+        }
+        const dirty = affected(nextFormulas, touched, options.maxRangeCells ?? 10000, options.grid);
+        const active = new Set<string>();
+        const computed = new Map<string, Value>();
+        const compute = (
+          key: string,
+        ): Effect.Effect<Value, ResolutionFailure | EvaluationFailure | E, R> =>
+          Effect.gen(function* () {
+            if (nextInputs.has(key)) return nextInputs.get(key)!;
+            const ast = nextFormulas.get(key);
+            if (!ast) return yield* external.get(key);
+            if (active.has(key)) return error("#CYCLE!");
+            if (computed.has(key)) return computed.get(key)!;
+            if (!dirty.has(key) && nextResults.has(key)) return nextResults.get(key)!;
+            active.add(key);
+            const local: ReferenceResolverService<ResolutionFailure | EvaluationFailure | E, R> = {
+              get: compute,
+            };
+            const value = yield* evaluateWithServices(ast, functions, local, options);
+            active.delete(key);
+            computed.set(key, value);
+            return value;
+          });
+        for (const key of dirty) yield* compute(key);
+        for (const [key, value] of computed) nextResults.set(key, value);
+        const changed = new Map<string, Value>();
+        for (const key of touched) {
+          const value = nextInputs.get(key) ?? nextResults.get(key) ?? error("#REF!");
+          if (
+            JSON.stringify(value) !==
+            JSON.stringify(current.inputs.get(key) ?? current.results.get(key))
+          )
+            changed.set(key, value);
+        }
+        for (const [key, value] of computed)
+          if (JSON.stringify(value) !== JSON.stringify(current.results.get(key)))
+            changed.set(key, value);
+        const revision = current.revision + 1;
+        return {
+          nextState: {
             inputs: nextInputs,
             formulas: nextFormulas,
             results: nextResults,
             revision,
-          });
-          return { revision, changed };
-        }),
+          },
+          result: { revision, changed },
+        };
+      });
+    const update = (updates: readonly Update[]) =>
+      semaphore.withPermits(1)(
+        Effect.uninterruptibleMask((restore) =>
+          Effect.flatMap(
+            // Preparation and host evaluation are interruptible; only atomic commit is masked.
+            restore(stage(updates)),
+            ({ nextState, result }) => Effect.as(Ref.set(state, nextState), result),
+          ),
+        ),
       );
     return { update, get, snapshot };
   });

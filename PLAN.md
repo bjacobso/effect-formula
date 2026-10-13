@@ -31,7 +31,8 @@ Status: in progress. The first executable slice is implemented; the checklist be
 ## Phase 2 — recalculation session
 
 - [x] Add stable dependency keys, formula/input registration, invalidation, batch updates, and changed-result delivery.
-- [x] Detect cycles and serialize async updates. Explicit cancellation policy remains to do.
+- [x] Detect cycles and serialize async updates.
+- [x] Define cancellation with interruptible staging, atomic commit, permit release, and continuation of queued updates; test interruption, timeout, late resolver responses, and typed custom functions.
 - [x] Exercise multi-step spreadsheet and form scenarios, including changed inputs and an async update race.
 
 **Exit:** a host can update inputs and receive consistent affected results without rebuilding the whole engine. Tests prove cycle and revision behavior.

@@ -34,7 +34,7 @@ console.log(await Effect.runPromise(session.get("field:total")))
 // { _tag: "Number", value: 36 }
 ```
 
-For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers.
+For one-shot evaluation, use `parse` and `evaluate` with a `ReferenceResolver` and `FunctionRegistry` layer. `memory(map)` and `emptyFunctions` provide simple defaults. Reference keys use `cell:A1` and `field:quantity`. `session.update` accepts a batch of `Input`, `Formula`, and `Remove` operations; its result includes a revision and changed values. The session serializes updates and accepts asynchronous reference resolvers. Interrupting an update during evaluation (including `Fiber.interrupt` or `Effect.timeout`) discards its entire batch, leaves the revision unchanged, and delivers no changes. Queued updates continue after cancellation cleanup. Reads wait for active updates and see a complete committed snapshot. Commit itself is atomic and uninterruptible; cancellation after commit does not undo a completed revision. Cancellation uses Effect interruption causes rather than a typed formula failure.
 
 ### Inspect formula inputs
 
