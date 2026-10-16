@@ -40,11 +40,11 @@ Conversions are centralized. The current first-slice rules are:
 | Direct aggregate argument | ignored | included | finite invariant decimal text included; other text gives `#VALUE!` | included as `0` or `1` | propagates |
 | Range aggregate entry | ignored | included | ignored | ignored | propagates |
 
-Equality compares like types, with case-insensitive text comparison; different types compare unequal. Ordering uses numeric ordering when both inputs are Numbers and text ordering otherwise. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type ordering need further audit.
+Equality compares like types, with case-insensitive text comparison; different types compare unequal. Ordering uses numeric ordering when both inputs are Numbers and text ordering otherwise. With `EvalOptions.compatibility: "hyperformula"`, a Blank operand compared with a Number, Text, or Boolean first becomes `0`, `""`, or `FALSE`. These rules describe current behavior; [conformance/rules.json](conformance/rules.json) marks the relevant OpenFormula sections `partial`. Locale-dependent numeric text and mixed-type ordering need further audit.
 
 `AND` and `OR` accept direct logical or numeric arguments. Range arguments use the OpenFormula NumberSequence behavior: Number and Error cells participate; Blank, Text, and distinct Boolean cells are skipped. An Error cell propagates. Their full function sections remain sampled pending broader argument and array-context audits.
 
-Numeric aggregates convert direct Logical and numeric Text arguments, while references contribute only Number cells (and Error cells where the function propagates errors). `COUNT` ignores errors. The current numeric Text conversion accepts invariant decimal syntax; OpenFormula leaves Text-to-Number conversion implementation-defined.
+Numeric aggregates convert direct Logical and numeric Text arguments, while references contribute only Number cells (and Error cells where the function propagates errors). In HyperFormula compatibility mode, `name:` references count as direct values, matching HyperFormula named expressions that hold a scalar; type analysis applies the same rule when given the option. `COUNT` ignores errors. The current numeric Text conversion accepts invariant decimal syntax; OpenFormula leaves Text-to-Number conversion implementation-defined.
 
 `NPV` and `IRR` use the same NumberSequence conversion: direct Logical and numeric Text cash flows convert to Number, while referenced Logical and Text cells are skipped without consuming a cash-flow period. Invalid direct Text returns `#VALUE!` under the engine's invariant decimal conversion policy.
 
@@ -53,6 +53,8 @@ Numeric aggregates convert direct Logical and numeric Text arguments, while refe
 `VALUE` implements OpenFormula's required invariant numbers, en-US numeric grouping and currency, mixed fractions, times, ISO dates and datetimes, and common en-US dates. Text-to-Number conversion elsewhere uses the narrower invariant decimal grammar. Dates use the configured epoch and UTC arithmetic; two-digit en-US years use a 1930–2029 window. Other locales and date formats remain to do. `0^0` and `POWER(0;0)` return `#NUM!` per the power constraint.
 
 ISO date-time text accepted by date and time functions validates hour, minute, and second ranges before conversion; out-of-range fields return `#VALUE!`.
+
+`SEARCH(find; text; [start])` returns a one-based character position like `FIND`, but ignores case. In `find`, `?` matches one character, `*` matches any run of characters, and `~` before `?`, `*`, or `~` matches that character literally. Regular expressions are not supported.
 
 ## 5. Evaluation and Effect API
 

@@ -1,6 +1,6 @@
 import { Effect, Option } from "effect";
 import type { FormulaAnalysisOptions } from "./Analysis.js";
-import { type FunctionRegistryService, rangeKeys } from "./Engine.js";
+import { type FunctionRegistryService, isNamedValue, rangeKeys } from "./Engine.js";
 import type { FormulaType, FunctionSignature } from "./FunctionSignature.js";
 import type { Ast, SourceSpan } from "./Parser.js";
 import { isError, toBoolean, toNumber } from "./Value.js";
@@ -44,6 +44,7 @@ const builtInSignatures: Readonly<Record<string, FunctionSignature>> = {
   REPT: { parameters: ["Text", "Number"], returns: "Text" },
   RIGHT: { parameters: ["Text"], optionalParameters: ["Number"], returns: "Text" },
   ROUND: { parameters: ["Number"], optionalParameters: ["Number"], returns: "Number" },
+  SEARCH: { parameters: ["Text", "Text"], optionalParameters: ["Number"], returns: "Number" },
   SIN: { parameters: ["Number"], returns: "Number" },
   SQRT: { parameters: ["Number"], returns: "Number" },
   TAN: { parameters: ["Number"], returns: "Number" },
@@ -316,7 +317,9 @@ export const analyzeFormulaTypes = (
             let unknown = false;
             for (const [index, arg] of node.args.entries()) {
               const argPath = `${path}.args[${index}]`;
-              const referenced = arg._tag === "Reference" || arg._tag === "Range";
+              const referenced =
+                (arg._tag === "Reference" && !isNamedValue(arg, options.compatibility)) ||
+                arg._tag === "Range";
               let candidates: readonly (readonly FormulaType[])[];
               if (arg._tag === "Range") {
                 const cells = rangeKeys(

@@ -933,6 +933,42 @@
       "expected": { "_tag": "Error", "code": "#VALUE!" }
     },
     {
+      "id": "function.SEARCH",
+      "name": "case-insensitive position",
+      "formula": "=SEARCH(\"B\";\"abcb\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.SEARCH",
+      "name": "start position skips an earlier match",
+      "formula": "=SEARCH(\"b\";\"abcb\";3)",
+      "expected": { "_tag": "Number", "value": 4 }
+    },
+    {
+      "id": "function.SEARCH",
+      "name": "question mark matches one character",
+      "formula": "=SEARCH(\"b?d\";\"abcd\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.SEARCH",
+      "name": "asterisk matches any characters",
+      "formula": "=SEARCH(\"b*e\";\"abcde\")",
+      "expected": { "_tag": "Number", "value": 2 }
+    },
+    {
+      "id": "function.SEARCH",
+      "name": "tilde escapes a wildcard",
+      "formula": "=SEARCH(\"~?\";\"ab?c\")",
+      "expected": { "_tag": "Number", "value": 3 }
+    },
+    {
+      "id": "function.SEARCH",
+      "name": "missing text returns an error",
+      "formula": "=SEARCH(\"x\";\"abc\")",
+      "expected": { "_tag": "Error", "code": "#VALUE!" }
+    },
+    {
       "id": "function.REPT",
       "name": "repeat text",
       "formula": "=REPT(\"ab\";3)",

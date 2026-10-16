@@ -1,6 +1,8 @@
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import {
+  blank,
+  bool,
   createSession,
   emptyFunctions,
   error,
@@ -103,6 +105,81 @@ describe("one-shot evaluation", () => {
       ),
     ).toEqual(number(30));
     expect(await run("=[.A1]![.B1]")).toEqual(error("#NULL!"));
+  });
+});
+
+describe("SEARCH", () => {
+  it("finds text without regard to case and counts characters from one", async () => {
+    expect(await run('=SEARCH("b";"ABCb")')).toEqual(number(2));
+    expect(await run('=SEARCH("B";"abcb";3)')).toEqual(number(4));
+    expect(await run('=SEARCH("";"abc";2)')).toEqual(number(2));
+    expect(await run('=SEARCH("c";"😀abc")')).toEqual(number(4));
+    expect(await run('=SEARCH("x";"abc")')).toEqual(error("#VALUE!"));
+    expect(await run('=SEARCH("a";"abc";0)')).toEqual(error("#VALUE!"));
+    expect(await run('=SEARCH("a";"abc";5)')).toEqual(error("#VALUE!"));
+  });
+  it("supports ? and * wildcards and ~ escapes", async () => {
+    expect(await run('=SEARCH("b?d";"abcd")')).toEqual(number(2));
+    expect(await run('=SEARCH("b*e";"abcde")')).toEqual(number(2));
+    expect(await run('=SEARCH("~?";"ab?c")')).toEqual(number(3));
+    expect(await run('=SEARCH("~*";"a*b")')).toEqual(number(2));
+    expect(await run('=SEARCH("~~";"a~b")')).toEqual(number(2));
+    expect(await run('=SEARCH("b~";"ab~")')).toEqual(number(2));
+    expect(await run('=SEARCH("(.)";"x(.)")')).toEqual(number(2));
+    expect(await run('=SEARCH("a-b";"xA-B")')).toEqual(number(2));
+    expect(await run('=FIND("?";"abc")')).toEqual(error("#VALUE!"));
+  });
+});
+
+describe("HyperFormula compatibility", () => {
+  const compare = (formula: string, mode?: "hyperformula") =>
+    Effect.runPromise(
+      evaluate(parseSync(formula), mode ? { compatibility: mode } : {}).pipe(
+        Effect.provide(
+          layer(
+            new Map([
+              ["field:missing", blank],
+              ["field:other", blank],
+            ]),
+          ),
+        ),
+      ),
+    );
+  it("compares Blank as the other operand's empty value", async () => {
+    for (const [formula, expected] of [
+      ['=[missing]=""', true],
+      ['=[missing]<>""', false],
+      ['=""=[missing]', true],
+      ["=[missing]=0", true],
+      ["=[missing]=FALSE()", true],
+      ["=[missing]=[other]", true],
+      ['=[missing]<"a"', true],
+      ["=[missing]<1", true],
+      ["=[missing]=1", false],
+    ] as const) {
+      expect(await compare(formula, "hyperformula"), formula).toEqual(bool(expected));
+    }
+    expect(await compare('=[missing]=""')).toEqual(bool(false));
+    expect(await compare("=[missing]=0")).toEqual(bool(false));
+  });
+  it("converts named values in numeric aggregates but keeps reference rules for cells", async () => {
+    const values = new Map<string, Value>([
+      ["name:LABEL", text("not a number")],
+      ["name:AMOUNT", text("12")],
+      ["cell:A1", text("not a number")],
+      ["cell:A2", number(3)],
+    ]);
+    const sum = (formula: string, compatibility?: "hyperformula") =>
+      Effect.runPromise(
+        evaluate(parseSync(formula), compatibility ? { compatibility } : {}).pipe(
+          Effect.provide(layer(values)),
+        ),
+      );
+    expect(await sum("=SUM(LABEL;1)", "hyperformula")).toEqual(error("#VALUE!"));
+    expect(await sum("=SUM(AMOUNT;1)", "hyperformula")).toEqual(number(13));
+    expect(await sum("=SUM(A1:A2;AMOUNT)", "hyperformula")).toEqual(number(15));
+    expect(await sum("=SUM(A1;A2)", "hyperformula")).toEqual(number(3));
+    expect(await sum("=SUM(LABEL;1)")).toEqual(number(1));
   });
 });
 

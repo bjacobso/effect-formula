@@ -1,6 +1,6 @@
 import { Data, Effect, Option, Schema } from "effect";
 import type { GridBounds } from "./Address.js";
-import { offsetReferenceKeys, rangeKeys } from "./Engine.js";
+import { type Compatibility, offsetReferenceKeys, rangeKeys } from "./Engine.js";
 import type { Ast } from "./Parser.js";
 
 export class FormulaAnalysisError extends Data.TaggedError("FormulaAnalysisError")<{
@@ -8,6 +8,8 @@ export class FormulaAnalysisError extends Data.TaggedError("FormulaAnalysisError
 }> {}
 
 export interface FormulaAnalysisOptions {
+  /** Apply the evaluator's compatibility rules to type analysis. */
+  readonly compatibility?: Compatibility;
   readonly maxRangeCells?: number;
   readonly grid?: GridBounds;
 }

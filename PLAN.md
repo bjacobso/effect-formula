@@ -60,6 +60,8 @@ Status: in progress. The first executable slice is implemented; the checklist be
 - [ ] Audit criterion matching against host wildcard, regular-expression, and whole-cell settings before a conformance claim.
 - [ ] Expand examples into boundary, error, type, reference, and locale cases for every required function and operator; review all general evaluator provisions.
 - [ ] Audit each tracked requirement against the full normative section before moving it to `verified`.
+- [x] Add `SEARCH` and an opt-in HyperFormula compatibility mode that passes the recorded production corpus.
+- [ ] Run the complete production formula export through the parser and engine, then add an adapter matching the application's HyperFormula call sites and `convertValue` policy.
 - Fill the remaining unsupported matrix entries from product needs, prioritizing dates, lookup/reference functions, cross-sheet references, and locale or Excel dialect support based on actual consumers.
 - Build independent fixtures from OpenFormula rules and run optional differential comparisons. Record mismatches with the rule, dialect, and chosen behavior.
 - Audit the full ODF 1.4 Small Group requirements before making any conformance claim. Treat Medium and Large as separate later targets.

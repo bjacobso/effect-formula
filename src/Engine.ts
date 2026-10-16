@@ -79,7 +79,15 @@ export const memory = (values: ReadonlyMap<string, Value>) =>
     get: (key: string) =>
       Effect.succeed(values.get(key) ?? error(key.startsWith("name:") ? "#NAME?" : "#REF!")),
   });
+/** Evaluation rules. HyperFormula mode follows HyperFormula where it departs from OpenFormula. */
+export type Compatibility = "openformula" | "hyperformula";
 export interface EvalOptions extends DateOptions {
+  /**
+   * In "hyperformula" mode, Blank compares as the other operand's empty value (0, "", or
+   * FALSE), and `name:` references are direct values rather than references in numeric
+   * aggregates, so their Text converts or gives `#VALUE!`.
+   */
+  readonly compatibility?: Compatibility;
   readonly maxSteps?: number;
   readonly maxRangeCells?: number;
   readonly grid?: GridBounds;
@@ -178,7 +186,23 @@ export function offsetReferenceKeys(
     ),
   );
 }
-function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
+/** In HyperFormula mode a named expression holding a scalar is a value, not a reference. */
+export const isNamedValue = (node: Ast, compatibility?: Compatibility): boolean =>
+  compatibility === "hyperformula" && node._tag === "Reference" && node.key.startsWith("name:");
+const emptyValue = (other: Scalar): Scalar =>
+  other._tag === "Number"
+    ? number(0)
+    : other._tag === "Text"
+      ? text("")
+      : other._tag === "Boolean"
+        ? bool(false)
+        : other;
+function arithmetic(
+  op: string,
+  left: Scalar,
+  right: Scalar,
+  compatibility?: Compatibility,
+): Scalar {
   if (isError(left)) return left;
   if (isError(right)) return right;
   if (op === "&") {
@@ -187,6 +211,12 @@ function arithmetic(op: string, left: Scalar, right: Scalar): Scalar {
     return isError(a) ? a : isError(b) ? b : text(a.value + b.value);
   }
   if (["=", "<>", "<", "<=", ">", ">="].includes(op)) {
+    if (compatibility === "hyperformula" && (left._tag === "Blank") !== (right._tag === "Blank"))
+      return arithmetic(
+        op,
+        left._tag === "Blank" ? emptyValue(right) : left,
+        right._tag === "Blank" ? emptyValue(left) : right,
+      );
     if (op === "=" || op === "<>") {
       let equal = false;
       if (left._tag === right._tag) {
@@ -282,7 +312,7 @@ function aggregate(
   }
 }
 const builtInNames = new Set(
-  "TRUE FALSE PI NA ABS ACOS ASIN ATAN COS SIN TAN EXP LN LOG10 DEGREES RADIANS EVEN ODD FACT SQRT INT POWER ATAN2 MOD ROUND LOG TRUNC LEN LOWER UPPER TRIM LEFT RIGHT MID EXACT FIND REPT N T VALUE ROWS COLUMNS ISBLANK ISERROR ISERR ISNA ISNUMBER ISTEXT ISLOGICAL ISNONTEXT".split(
+  "TRUE FALSE PI NA ABS ACOS ASIN ATAN COS SIN TAN EXP LN LOG10 DEGREES RADIANS EVEN ODD FACT SQRT INT POWER ATAN2 MOD ROUND LOG TRUNC LEN LOWER UPPER TRIM LEFT RIGHT MID EXACT FIND REPT N T VALUE ROWS COLUMNS ISBLANK ISERROR ISERR ISNA ISNUMBER ISTEXT ISLOGICAL ISNONTEXT SEARCH".split(
     " ",
   ),
 );
@@ -299,6 +329,22 @@ function roundDecimal(value: number, places: number, mode: "round" | "truncate")
   const rounded = mode === "round" ? Math.round(scaled) : Math.trunc(scaled);
   if (rounded === 0) return number(0);
   return number(Math.sign(value) * shiftDecimal(rounded, -places));
+}
+/** Case-insensitive SEARCH text: `?` and `*` are wildcards, and `~` escapes either or itself. */
+function searchPattern(needle: string): RegExp {
+  const chars = Array.from(needle);
+  let source = "";
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i]!;
+    const next = chars[i + 1];
+    if (char === "~" && (next === "?" || next === "*" || next === "~")) {
+      source += next === "~" ? "~" : `\\${next}`;
+      i++;
+    } else if (char === "?") source += ".";
+    else if (char === "*") source += ".*";
+    else source += char.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&");
+  }
+  return new RegExp(source, "isu");
 }
 function builtIn(
   name: string,
@@ -462,7 +508,8 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       const right = stringArg(1);
       return isError(left) ? left : isError(right) ? right : bool(left.value === right.value);
     }
-    case "FIND": {
+    case "FIND":
+    case "SEARCH": {
       if (args.length < 2 || args.length > 3) return error("#VALUE!");
       const needle = stringArg(0);
       const haystack = stringArg(1);
@@ -473,10 +520,12 @@ function evaluateBuiltIn(name: string, args: readonly Value[], options: EvalOpti
       const chars = Array.from(haystack.value);
       const index = Math.trunc(start.value) - 1;
       if (index < 0 || index > chars.length) return error("#VALUE!");
-      const position = chars.slice(index).join("").indexOf(needle.value);
+      const rest = chars.slice(index).join("");
+      const position =
+        name === "FIND" ? rest.indexOf(needle.value) : rest.search(searchPattern(needle.value));
       return position < 0
         ? error("#VALUE!")
-        : number(index + Array.from(chars.slice(index).join("").slice(0, position)).length + 1);
+        : number(index + Array.from(rest.slice(0, position)).length + 1);
     }
     case "REPT": {
       if (args.length !== 2) return error("#VALUE!");
@@ -630,6 +679,7 @@ export function evaluateWithServices<E, R, ER, RR>(
               node.operator,
               scalar(yield* visit(node.left)),
               scalar(yield* visit(node.right)),
+              options.compatibility,
             );
           case "Call": {
             const name = node.name;
@@ -767,7 +817,7 @@ export function evaluateWithServices<E, R, ER, RR>(
               return error("#VALUE!");
             const referenceArguments = node.args.map(
               (arg) =>
-                arg._tag === "Reference" ||
+                (arg._tag === "Reference" && !isNamedValue(arg, options.compatibility)) ||
                 arg._tag === "Range" ||
                 (arg._tag === "Binary" && arg.operator === "!"),
             );
