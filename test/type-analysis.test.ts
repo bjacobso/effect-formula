@@ -298,6 +298,32 @@ describe("AST type analysis", () => {
       types: ["Number", "Unknown"],
       diagnostics: [],
     });
+    expect(analyze("=SUM(LABEL)", { "name:LABEL": "Text" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
+    expect(
+      Effect.runSync(
+        analyzeFormulaTypes(
+          parseSync("=SUM(LABEL)"),
+          { "name:LABEL": "Text" },
+          { compatibility: "hyperformula" },
+        ),
+      ),
+    ).toEqual({
+      types: ["Number", "Error"],
+      diagnostics: [
+        {
+          path: "root.args[0]",
+          severity: "possible",
+          message: "Cannot guarantee conversion to Number",
+        },
+      ],
+    });
+    expect(analyze('=SEARCH("a";[name])', { "field:name": "Text" })).toEqual({
+      types: ["Number"],
+      diagnostics: [],
+    });
     expect(analyze("=AVERAGE(A1:A2)", { "cell:A1": "Text", "cell:A2": "Boolean" })).toEqual({
       types: ["Error"],
       diagnostics: [],

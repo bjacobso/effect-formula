@@ -120,6 +120,10 @@ Reference geometry helpers such as `rangeKeys` return `Option`: `Some` contains 
 
 `VALUE` parses OpenFormula's required number, time, and ISO date text, plus common en-US formats. Its dates use `dateEpoch` (UTC, default `1899-12-30`). Other implicit numeric conversion accepts invariant decimal text only.
 
+### HyperFormula compatibility
+
+Pass `{ compatibility: "hyperformula" }` to `evaluate`, `createSession`, a host adapter, or type analysis to follow HyperFormula where it differs from OpenFormula. A Blank compared with a Number, Text, or Boolean is first treated as `0`, `""`, or `FALSE`. A `name:` reference passed to `SUM` or another numeric aggregate is a direct value, so its numeric Text converts and other Text gives `#VALUE!`. The default mode keeps OpenFormula rules. [COMPATIBILITY.md](COMPATIBILITY.md) lists the production formulas this mode is checked against.
+
 ### Function profiles
 
 Use `configureFunctions` to add Effect functions, override a built-in, or remove a function from a host's formula language. Names are case-insensitive. The profile is fixed when an evaluation or session receives its Effect layer.

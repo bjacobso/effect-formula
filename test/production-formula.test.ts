@@ -58,6 +58,7 @@ const resultOf = (value: Value): FormulaResult => {
 };
 
 const nameKey = (name: string) => `name:${name.toUpperCase()}`;
+const options = { compatibility: "hyperformula" } as const;
 const services = (values: ReadonlyMap<string, Value> = new Map()) =>
   Layer.merge(memory(values), emptyFunctions);
 
@@ -76,9 +77,11 @@ const run = async (
       values.set(key, inputValue(data[key.slice("name:".length).toLowerCase()]));
   }
   if (mode === "browser")
-    return resultOf(await Effect.runPromise(evaluate(ast).pipe(Effect.provide(services(values)))));
+    return resultOf(
+      await Effect.runPromise(evaluate(ast, options).pipe(Effect.provide(services(values)))),
+    );
 
-  const session = await Effect.runPromise(createSession().pipe(Effect.provide(services())));
+  const session = await Effect.runPromise(createSession(options).pipe(Effect.provide(services())));
   await Effect.runPromise(
     session.update([
       { _tag: "Formula", key: nameKey("form.conformance_result"), formula: ast },
@@ -97,36 +100,7 @@ interface ParityGap {
 // Keep the supplied expectations intact. These are explicit diagnostic gaps,
 // not alternative parity targets. Remove entries when compatibility improves;
 // it.fails then reports an unexpected pass until the gap is removed.
-const parityGaps: Readonly<Record<string, Readonly<Record<string, ParityGap>>>> = {
-  "I-9 first nonempty identifier selection": {
-    "second identifier is the fallback": {
-      reason: "Blank compares unequal to empty Text",
-      browser: "alien_uscis_number",
-    },
-    "no identifiers": {
-      reason: "Blank compares unequal to empty Text",
-      browser: "alien_uscis_number",
-    },
-  },
-  "W-4 named-expression SUM": {
-    "nonnumeric named expressions produce a value error": {
-      reason: "SUM ignores Text in references under NumberSequence rules",
-      browser: 500,
-    },
-  },
-  "Withholding multi-select SEARCH and ISNUMBER": {
-    "selected option is found in the joined array": {
-      reason: "SEARCH is not implemented",
-      browser: null,
-      server: { error: "#NAME?" },
-    },
-    "SEARCH ignores case": {
-      reason: "SEARCH is not implemented",
-      browser: null,
-      server: { error: "#NAME?" },
-    },
-  },
-};
+const parityGaps: Readonly<Record<string, Readonly<Record<string, ParityGap>>>> = {};
 const strictParity = process.env.PRODUCTION_PARITY_STRICT === "1";
 
 describe.each(["browser", "server"] as const)("%s production formula parity", (mode) => {
@@ -155,7 +129,7 @@ const quizTotalKey = nameKey("form.conformance_quiz_total");
 
 const createQuizSession = async (data: Readonly<Record<string, unknown>>) => {
   const session = await Effect.runPromise(
-    createSession({ dialect: "excel" }).pipe(Effect.provide(services())),
+    createSession({ ...options, dialect: "excel" }).pipe(Effect.provide(services())),
   );
   const formulas = Object.entries(PRODUCTION_QUIZ_FIXTURE.formulas);
   const computedKeys = new Set(formulas.map(([name]) => nameKey(name)));
